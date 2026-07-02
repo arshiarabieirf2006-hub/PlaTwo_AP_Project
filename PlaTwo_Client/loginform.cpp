@@ -1,6 +1,6 @@
 #include "loginform.h"
 #include "ui_loginform.h"
-
+#include <QMessageBox>
 LoginForm::LoginForm(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::LoginForm)
@@ -12,3 +12,21 @@ LoginForm::~LoginForm()
 {
     delete ui;
 }
+
+void LoginForm::on_loginButton_clicked()
+{
+    QString username = ui->usernameLineEdit->text();
+    QString password = ui->passwordLineEdit->text();
+    if (username.isEmpty() || password.isEmpty()){
+        QMessageBox::warning(this,"Warning", "Please enter both username and password!");
+        return;
+    }
+    if(username == "admin" && password == "1234"){
+        QMessageBox::information(this,"Success","Login successful.Welcome.");
+        //code
+    }
+    else{
+        QMessageBox::critical(this,"Error", "Incorrect username or password!");
+    }
+}
+
