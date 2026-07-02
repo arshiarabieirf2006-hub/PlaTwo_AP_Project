@@ -9,16 +9,18 @@ CONFIG += c++17
 SOURCES += \
     loginform.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    signupform.cpp
 
 HEADERS += \
     loginform.h \
-    mainwindow.h
+    mainwindow.h \
+    signupform.h
 
 FORMS += \
     loginform.ui \
-    mainwindow.ui
-
+    mainwindow.ui \
+    signupform.ui
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
