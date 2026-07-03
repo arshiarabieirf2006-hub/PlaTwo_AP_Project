@@ -1,6 +1,7 @@
 #include "loginform.h"
 #include "ui_loginform.h"
 #include <QMessageBox>
+#include "signupform.h"
 LoginForm::LoginForm(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::LoginForm)
@@ -28,5 +29,20 @@ void LoginForm::on_loginButton_clicked()
     else{
         QMessageBox::critical(this,"Error", "Incorrect username or password!");
     }
+}
+
+
+void LoginForm::on_SignUp_clicked()
+{
+
+        //  Create a new sign up page
+        SignUpForm *signUpPage = new SignUpForm();
+
+
+        signUpPage->show();
+
+
+        this->hide();
+
 }
 
