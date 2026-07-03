@@ -1,8 +1,10 @@
 #include "signupform.h"
 #include "ui_signupform.h"
+#include "loginform.h"
 #include <QRegularExpression>
 #include <QMessageBox>
 #include <QCryptographicHash>
+
 
 SignUpForm::SignUpForm(QWidget *parent)
     : QWidget(parent)
@@ -62,3 +64,13 @@ void SignUpForm::on_signUpButton_clicked()
     ui->passwordEdit->clear();
 
 }
+
+
+void SignUpForm::on_backToLoginButton_clicked()
+{
+    LoginForm *loginPage = new LoginForm();
+    loginPage->show();
+
+    this->deleteLater();
+}
+
