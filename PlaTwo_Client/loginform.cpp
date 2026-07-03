@@ -42,7 +42,7 @@ void LoginForm::on_SignUp_clicked()
         signUpPage->show();
 
 
-        this->hide();
+        this->deleteLater();
 
 }
 
