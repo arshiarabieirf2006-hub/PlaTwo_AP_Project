@@ -11,18 +11,21 @@ SOURCES += \
     main.cpp \
     mainmenu.cpp \
     mainwindow.cpp \
+    profileform.cpp \
     signupform.cpp
 
 HEADERS += \
     loginform.h \
     mainmenu.h \
     mainwindow.h \
+    profileform.h \
     signupform.h
 
 FORMS += \
     loginform.ui \
     mainmenu.ui \
     mainwindow.ui \
+    profileform.ui \
     signupform.ui
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

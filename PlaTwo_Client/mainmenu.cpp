@@ -13,8 +13,3 @@ MainMenu::~MainMenu()
     delete ui;
 }
 
-void MainMenu::on_pushButton_5_clicked()
-{
-
-}
-
