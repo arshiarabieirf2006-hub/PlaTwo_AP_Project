@@ -13,7 +13,9 @@ MainMenu::~MainMenu()
     delete ui;
 }
 
-void MainMenu::on_pushButton_5_clicked()
+
+
+void MainMenu::on_exitButton_clicked()
 {
     QCoreApplication::quit();
 }

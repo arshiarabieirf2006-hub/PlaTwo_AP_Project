@@ -16,10 +16,13 @@ public:
     ~Leaderboard();
 
 private slots:
-    void on_pushButton_clicked();
+    void on_refreshButton_clicked();
+
+    void on_backButton_clicked();
 
 private:
     Ui::Leaderboard *ui;
+    void loadLeaderboardData();
 };
 
 #endif // LEADERBOARD_H
