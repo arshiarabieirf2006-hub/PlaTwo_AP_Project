@@ -15,6 +15,6 @@ MainMenu::~MainMenu()
 
 void MainMenu::on_pushButton_5_clicked()
 {
-
+    QCoreApplication::quit();
 }
 

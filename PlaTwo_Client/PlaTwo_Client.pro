@@ -7,6 +7,7 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    leaderboard.cpp \
     loginform.cpp \
     main.cpp \
     mainmenu.cpp \
@@ -14,12 +15,14 @@ SOURCES += \
     signupform.cpp
 
 HEADERS += \
+    leaderboard.h \
     loginform.h \
     mainmenu.h \
     mainwindow.h \
     signupform.h
 
 FORMS += \
+    leaderboard.ui \
     loginform.ui \
     mainmenu.ui \
     mainwindow.ui \
