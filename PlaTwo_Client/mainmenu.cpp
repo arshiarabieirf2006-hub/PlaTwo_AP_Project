@@ -1,6 +1,8 @@
 #include "mainmenu.h"
 #include "ui_mainmenu.h"
 #include "profileform.h"
+#include "leaderboard.h"
+#include "store.h"
 
 MainMenu::MainMenu(QWidget *parent)
     : QWidget(parent)
@@ -35,3 +37,18 @@ void MainMenu::on_profileButton_clicked()
 
     profileWindow->show();
 }
+void MainMenu::on_leaderboardButton_clicked()
+{
+    Leaderboard *lbPage = new Leaderboard();
+    lbPage->setAttribute(Qt::WA_DeleteOnClose);
+    lbPage->show();
+}
+
+
+void MainMenu::on_storeButton_clicked()
+{
+    Store *storePage = new Store();
+    storePage->setAttribute(Qt::WA_DeleteOnClose);
+    storePage->show();
+}
+

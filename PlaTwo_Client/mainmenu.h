@@ -25,6 +25,10 @@ private slots:
 
     void on_profileButton_clicked();
 
+    void on_leaderboardButton_clicked();
+
+    void on_storeButton_clicked();
+
 private:
     Ui::MainMenu *ui;
 
