@@ -9,16 +9,19 @@ CONFIG += c++17
 SOURCES += \
     loginform.cpp \
     main.cpp \
+    mainmenu.cpp \
     mainwindow.cpp \
     signupform.cpp
 
 HEADERS += \
     loginform.h \
+    mainmenu.h \
     mainwindow.h \
     signupform.h
 
 FORMS += \
     loginform.ui \
+    mainmenu.ui \
     mainwindow.ui \
     signupform.ui
 # Default rules for deployment.
