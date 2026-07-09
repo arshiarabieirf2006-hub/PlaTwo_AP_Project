@@ -2,6 +2,7 @@
 #define MAINMENU_H
 
 #include <QWidget>
+#include <QString>
 
 namespace Ui {
 class MainMenu;
@@ -15,12 +16,20 @@ public:
     explicit MainMenu(QWidget *parent = nullptr);
     ~MainMenu();
 
-private slots:
 
+    void setUsername(const QString &username);
+
+private slots:
     void on_exitButton_clicked();
+
+
+    void on_profileButton_clicked();
 
 private:
     Ui::MainMenu *ui;
+
+
+    QString loggedInUser;
 };
 
-#endif // MAINMENU_H
+#endif
