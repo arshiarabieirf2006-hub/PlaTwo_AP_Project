@@ -87,8 +87,7 @@ void SignUpForm::on_signUpButton_clicked()
         QTextStream out(&file);
 
 
-        out << username << "," << hashedPasswordStr << "," << email << "," << name << "," << phone << "\n";
-
+    out << username << "," << hashedPasswordStr << "," << email << "," << name << "," << phone << "," << 0 << "\n";
         file.close();
 
         QMessageBox::information(this, "Success", "Account created successfully!");
