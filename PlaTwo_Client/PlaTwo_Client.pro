@@ -13,7 +13,8 @@ SOURCES += \
     mainmenu.cpp \
     mainwindow.cpp \
     profileform.cpp \
-    signupform.cpp
+    signupform.cpp \
+    store.cpp
 
 HEADERS += \
     leaderboard.h \
@@ -21,7 +22,8 @@ HEADERS += \
     mainmenu.h \
     mainwindow.h \
     profileform.h \
-    signupform.h
+    signupform.h \
+    store.h
 
 FORMS += \
     leaderboard.ui \
@@ -29,7 +31,8 @@ FORMS += \
     mainmenu.ui \
     mainwindow.ui \
     profileform.ui \
-    signupform.ui
+    signupform.ui \
+    store.ui
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
