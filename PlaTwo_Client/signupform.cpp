@@ -36,7 +36,7 @@ void SignUpForm::on_signUpButton_clicked()
 
     QRegularExpression phoneRegex("^09\\d{9}$");
     if (!phoneRegex.match(phone).hasMatch()) {
-        QMessageBox::warning(this, "Invalid Phone", "Please enter a valid phone number (e.g., 09123456789).");
+        QMessageBox::warning(this, "Invalid Phone", "Please enter a valid phone number .");
         return;
     }
 
@@ -55,6 +55,31 @@ void SignUpForm::on_signUpButton_clicked()
     QByteArray passwordData = password.toUtf8();
     QByteArray hashedPassword = QCryptographicHash::hash(passwordData, QCryptographicHash::Sha256).toHex();
     QString hashedPasswordStr = QString(hashedPassword);
+
+    //بررسی تکراری نبودن نام کاربری
+    QFile checkFile("users.txt");
+
+    if (checkFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&checkFile);
+
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            QStringList userDetails = line.split(",");
+
+
+            if (userDetails.size() > 0) {
+                QString existingUsername = userDetails[0];
+
+
+                if (existingUsername == username) {
+                    QMessageBox::warning(this, "Duplicate User", "This username is already taken. Please choose another one.");
+                    checkFile.close();
+                    return;
+                }
+            }
+        }
+        checkFile.close();
+    }
 
     // ذخیره در فایل
     QFile file("users.txt");
