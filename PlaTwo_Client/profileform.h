@@ -2,7 +2,7 @@
 #define PROFILEFORM_H
 
 #include <QWidget>
-
+#include <QCryptographicHash>
 namespace Ui {
 class ProfileForm;
 }
@@ -21,8 +21,12 @@ private slots:
 
     void on_backButton_clicked();
 
+    void on_saveButton_clicked();
+
 private:
     Ui::ProfileForm *ui;
+    QString currentUser;
+    QString currentPasswordHash;
 };
 
 #endif
