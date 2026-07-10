@@ -29,6 +29,8 @@ private slots:
 
     void on_storeButton_clicked();
 
+    void on_startGameButton_clicked();
+
 private:
     Ui::MainMenu *ui;
 

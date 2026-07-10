@@ -3,7 +3,7 @@
 #include "profileform.h"
 #include "leaderboard.h"
 #include "store.h"
-
+#include "gameform.h"
 MainMenu::MainMenu(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MainMenu)
@@ -50,5 +50,12 @@ void MainMenu::on_storeButton_clicked()
     Store *storePage = new Store();
     storePage->setAttribute(Qt::WA_DeleteOnClose);
     storePage->show();
+}
+
+
+void MainMenu::on_startGameButton_clicked()
+{
+    GameForm *gameWindow = new GameForm();
+    gameWindow->show();
 }
 
