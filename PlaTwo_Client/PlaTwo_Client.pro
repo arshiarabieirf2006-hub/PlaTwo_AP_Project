@@ -15,7 +15,8 @@ SOURCES += \
     mainwindow.cpp \
     profileform.cpp \
     signupform.cpp \
-    store.cpp
+    store.cpp \
+    lineitem.cpp
 
 HEADERS += \
     gameform.h \
@@ -25,7 +26,8 @@ HEADERS += \
     mainwindow.h \
     profileform.h \
     signupform.h \
-    store.h
+    store.h \
+    lineitem.h
 
 FORMS += \
     gameform.ui \
