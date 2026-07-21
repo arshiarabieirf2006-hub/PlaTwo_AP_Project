@@ -2,6 +2,7 @@
 #define SIGNUPFORM_H
 
 #include <QWidget>
+#include <QTcpSocket>
 
 namespace Ui {
 class SignUpForm;
@@ -17,12 +18,12 @@ public:
 
 private slots:
     void on_signUpButton_clicked();
-
-
     void on_backToLoginButton_clicked();
+    void onReadyRead();
 
 private:
     Ui::SignUpForm *ui;
+    QTcpSocket *socket;
 };
 
 #endif // SIGNUPFORM_H

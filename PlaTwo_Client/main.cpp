@@ -1,13 +1,12 @@
-#include "loginform.h"
-
 #include <QApplication>
+#include "loginform.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    LoginForm *w = new LoginForm();
-    w->show();
+    LoginForm w;
+    w.show();
 
-    return QApplication::exec();
+    return a.exec();
 }

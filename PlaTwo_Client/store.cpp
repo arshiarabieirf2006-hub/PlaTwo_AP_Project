@@ -4,16 +4,24 @@
 #include <QTextStream>
 #include <QMessageBox>
 
-Store::Store(QWidget *parent) :
+Store::Store(QString username, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Store),
-    userCoins(1000)
+    currentUsername(username),
+    userCoins(0)
 {
     ui->setupUi(this);
 
+    socket = new QTcpSocket(this);
+    connect(socket, &QTcpSocket::readyRead, this, &Store::onReadyRead);
+    socket->connectToHost("127.0.0.1", 8080);
 
-    ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
-
+    if (socket->waitForConnected(2000)) {
+        QString request = "GET_COINS:" + currentUsername;
+        socket->write(request.toUtf8());
+    } else {
+        ui->coinsLabel->setText("Coins: Connection Error");
+    }
 
     loadStoreItems();
 }
@@ -27,7 +35,6 @@ void Store::loadStoreItems()
 {
     ui->itemsList->clear();
 
-
     QFile file("items.txt");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&file);
@@ -37,8 +44,6 @@ void Store::loadStoreItems()
             if (parts.size() >= 2) {
                 QString itemName = parts[0].trimmed();
                 QString price = parts[1].trimmed();
-
-
                 ui->itemsList->addItem(itemName + " - Price: " + price + " Coins");
             }
         }
@@ -63,15 +68,35 @@ void Store::on_buyButton_clicked()
     QStringList parts = itemText.split("Price: ");
     if (parts.size() >= 2) {
         int price = parts[1].split(" ").first().toInt();
-        QString itemName = parts[0].split(" -").first();
 
-        if (userCoins >= price) {
-            userCoins -= price;
-            ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
-            QMessageBox::information(this, "Success", "You successfully bought: " + itemName);
+        // ارسال درخواست خرید به سرور
+        if (socket->state() == QAbstractSocket::ConnectedState) {
+            QString request = "BUY_ITEM:" + currentUsername + ":" + QString::number(price);
+            socket->write(request.toUtf8());
         } else {
-            QMessageBox::critical(this, "Inadequate Funds", "You don't have enough coins!");
+            QMessageBox::critical(this, "Error", "Not connected to server!");
         }
+    }
+}
+
+void Store::onReadyRead()
+{
+    QByteArray response = socket->readAll();
+    QString msg = QString::fromUtf8(response).trimmed();
+
+    QStringList parts = msg.split(":");
+
+    if (parts[0] == "COINS_RESULT" && parts.size() >= 2) {
+        userCoins = parts[1].toInt();
+        ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
+    }
+    else if (parts[0] == "BUY_SUCCESS" && parts.size() >= 2) {
+        userCoins = parts[1].toInt();
+        ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
+        QMessageBox::information(this, "Success", "Item purchased successfully!");
+    }
+    else if (msg == "BUY_FAILED_NO_COINS") {
+        QMessageBox::critical(this, "Inadequate Funds", "You don't have enough coins!");
     }
 }
 

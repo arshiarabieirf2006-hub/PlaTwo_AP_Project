@@ -4,11 +4,19 @@
 #include "leaderboard.h"
 #include "store.h"
 #include "gameform.h"
-MainMenu::MainMenu(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::MainMenu)
+MainMenu::MainMenu(QWidget *parent) :
+    QWidget(parent),
+    ui(new Ui::MainMenu)
 {
     ui->setupUi(this);
+
+    socket = new QTcpSocket(this);
+
+    socket->connectToHost("127.0.0.1", 8080);
+
+    connect(socket, &QTcpSocket::connected, this, [](){
+        qDebug() << "Successfully connected to the server!";
+    });
 }
 
 MainMenu::~MainMenu()
@@ -47,9 +55,9 @@ void MainMenu::on_leaderboardButton_clicked()
 
 void MainMenu::on_storeButton_clicked()
 {
-    Store *storePage = new Store();
-    storePage->setAttribute(Qt::WA_DeleteOnClose);
-    storePage->show();
+    Store *storeWindow = new Store();
+    storeWindow->setAttribute(Qt::WA_DeleteOnClose);
+    storeWindow->show();
 }
 
 

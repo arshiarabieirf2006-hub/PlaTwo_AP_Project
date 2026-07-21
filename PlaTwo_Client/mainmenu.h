@@ -1,5 +1,6 @@
 #ifndef MAINMENU_H
 #define MAINMENU_H
+#include <QTcpSocket>
 
 #include <QWidget>
 #include <QString>
@@ -33,6 +34,7 @@ private slots:
 
 private:
     Ui::MainMenu *ui;
+    QTcpSocket *socket;
 
 
     QString loggedInUser;
