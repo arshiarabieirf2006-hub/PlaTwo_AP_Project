@@ -10,6 +10,17 @@ MainMenu::MainMenu(QWidget *parent) :
 {
     ui->setupUi(this);
 
+
+    QStringList colors = {"Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink", "Cyan", "Brown"};
+
+
+    ui->comboColorP1->addItems(colors);
+    ui->comboColorP2->addItems(colors);
+
+
+    ui->comboColorP1->setCurrentText("Red");
+    ui->comboColorP2->setCurrentText("Blue");
+
     socket = new QTcpSocket(this);
 
     socket->connectToHost("127.0.0.1", 8080);
@@ -63,7 +74,13 @@ void MainMenu::on_storeButton_clicked()
 
 void MainMenu::on_startGameButton_clicked()
 {
-    GameForm *gameWindow = new GameForm();
-    gameWindow->show();
+    QString c1 = ui->comboColorP1->currentText();
+    QString c2 = ui->comboColorP2->currentText();
+
+    GameForm *game = new GameForm(socket, QColor(c1), QColor(c2));
+    game->setAttribute(Qt::WA_DeleteOnClose);
+    game->show();
+
+    this->close();
 }
 

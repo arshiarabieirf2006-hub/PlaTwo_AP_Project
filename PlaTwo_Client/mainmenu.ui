@@ -7,14 +7,51 @@
     <x>0</x>
     <y>0</y>
     <width>1305</width>
-    <height>629</height>
+    <height>855</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="6" column="2">
+   <item row="1" column="2">
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Player 2</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboColorP2"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Player 1</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboColorP1"/>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="1">
+    <spacer name="horizontalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>581</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="7" column="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>
@@ -27,7 +64,14 @@
      </property>
     </spacer>
    </item>
-   <item row="5" column="2">
+   <item row="2" column="2">
+    <widget class="QPushButton" name="startGameButton">
+     <property name="text">
+      <string>Start Game</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
     <widget class="QPushButton" name="exitButton">
      <property name="text">
       <string>Exit</string>
@@ -35,16 +79,36 @@
     </widget>
    </item>
    <item row="3" column="2">
-    <widget class="QPushButton" name="leaderboardButton">
-     <property name="text">
-      <string>Leaderboard</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
     <widget class="QPushButton" name="profileButton">
      <property name="text">
       <string>Profile</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="3">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>581</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="5" column="2">
+    <widget class="QPushButton" name="storeButton">
+     <property name="text">
+      <string>Store</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2">
+    <widget class="QPushButton" name="leaderboardButton">
+     <property name="text">
+      <string>Leaderboard</string>
      </property>
     </widget>
    </item>
@@ -60,46 +124,6 @@
       </size>
      </property>
     </spacer>
-   </item>
-   <item row="4" column="2">
-    <widget class="QPushButton" name="storeButton">
-     <property name="text">
-      <string>Store</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="3">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>581</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="3" column="1">
-    <spacer name="horizontalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>581</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="1" column="2">
-    <widget class="QPushButton" name="startGameButton">
-     <property name="text">
-      <string>Start Game</string>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>

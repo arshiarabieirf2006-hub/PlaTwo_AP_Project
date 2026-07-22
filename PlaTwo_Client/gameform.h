@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QGraphicsScene>
 #include <QVector>
-
+#include <QTcpSocket>
 namespace Ui {
 class GameForm;
 }
@@ -14,17 +14,22 @@ class GameForm : public QWidget
     Q_OBJECT
 
 public:
-    explicit GameForm(QWidget *parent = nullptr);
+
     ~GameForm();
+
+   explicit GameForm(QTcpSocket *serverSocket, QColor color1 = Qt::red, QColor color2 = Qt::blue, QWidget *parent = nullptr);
 
 private slots:
 
     void onLineClicked(int row, int col, bool isHoriz);
+    void onServerMessage();
 
 private:
     Ui::GameForm *ui;
     QGraphicsScene *scene;
 
+
+    QTcpSocket *socket;
     int gridSize;
 
 
@@ -39,6 +44,12 @@ private:
 
 
     bool checkForCompletedBoxes(int row, int col, bool isHoriz);
+    bool isProcessingNetworkMove = false;
+
+    QColor p1Color;
+    QColor p2Color;
+
+
 };
 
 #endif

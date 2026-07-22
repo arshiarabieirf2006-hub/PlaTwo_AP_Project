@@ -205,6 +205,13 @@ private slots:
 
             clientSocket->write(response.toUtf8());
         }
+        else if (command == "MOVE") {
+            for (QTcpSocket* otherClient : std::as_const(clients)) {
+                if (otherClient != clientSocket) {
+                    otherClient->write((message + "\n").toUtf8());
+                }
+            }
+        }
     }
 
     void onDisconnected() {

@@ -4,10 +4,13 @@
 #include <QGraphicsEllipseItem>
 #include <QBrush>
 #include <QDebug>
-
-GameForm::GameForm(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::GameForm)
+#include <QMessageBox>
+GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::GameForm)
+    , socket(serverSocket)
+    , p1Color(color1)
+    , p2Color(color2)
 {
     ui->setupUi(this);
 
@@ -65,6 +68,8 @@ GameForm::GameForm(QWidget *parent) :
             scene->addEllipse(x, y, dotSize, dotSize, QPen(Qt::NoPen), blackBrush);
         }
     }
+
+    connect(socket, &QTcpSocket::readyRead, this, &GameForm::onServerMessage);
 }
 
 GameForm::~GameForm()
@@ -74,6 +79,10 @@ GameForm::~GameForm()
 
 void GameForm::onLineClicked(int row, int col, bool isHoriz)
 {
+    if (!isProcessingNetworkMove) {
+        QString msg = QString("MOVE:%1:%2:%3\n").arg(row).arg(col).arg(isHoriz ? 1 : 0);
+        socket->write(msg.toUtf8());
+    }
     if (isHoriz) {
         hLines[row][col] = true;
     } else {
@@ -88,6 +97,23 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
     } else {
         qDebug() << "Box completed! Bonus turn for player: " << currentPlayer;
         qDebug() << "Scores -> Player 1: " << player1Score << " | Player 2: " << player2Score;
+    }
+    int totalBoxes = (gridSize - 1) * (gridSize - 1);
+
+    if (player1Score + player2Score == totalBoxes) {
+        QString winnerMessage;
+
+        if (player1Score > player2Score) {
+            winnerMessage = "Congratulations! Player 1 wins!";
+        } else if (player2Score > player1Score) {
+            winnerMessage = "Congratulations! Player 2 wins!";
+        } else {
+            winnerMessage = "It's a draw!";
+        }
+
+        QMessageBox::information(this, "Game Over", winnerMessage);
+
+        this->close();
     }
 }
 
@@ -110,7 +136,7 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
                     QGraphicsTextItem *text = new QGraphicsTextItem(playerText);
 
 
-                    text->setDefaultTextColor(currentPlayer == 1 ? Qt::red : Qt::blue);
+                    text->setDefaultTextColor(currentPlayer == 1 ? p1Color : p2Color);
 
 
                     QFont font("Arial", 18, QFont::Bold);
@@ -141,4 +167,22 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
     }
 
     return completed;
+}
+void GameForm::onServerMessage() {
+    QByteArray data = socket->readAll();
+    QStringList messages = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
+
+    for (const QString& msg : messages) {
+        QStringList parts = msg.trimmed().split(":");
+        if (parts.size() >= 4 && parts[0] == "MOVE") {
+            int r = parts[1].toInt();
+            int c = parts[2].toInt();
+            bool isH = (parts[3] == "1");
+
+
+            isProcessingNetworkMove = true;
+            onLineClicked(r, c, isH);
+            isProcessingNetworkMove = false;
+        }
+    }
 }
