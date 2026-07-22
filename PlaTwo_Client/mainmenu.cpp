@@ -4,6 +4,8 @@
 #include "leaderboard.h"
 #include "store.h"
 #include "gameform.h"
+#include "morrisgameform.h"
+
 MainMenu::MainMenu(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MainMenu)
@@ -80,6 +82,18 @@ void MainMenu::on_startGameButton_clicked()
     GameForm *game = new GameForm(socket, QColor(c1), QColor(c2));
     game->setAttribute(Qt::WA_DeleteOnClose);
     game->show();
+
+    this->close();
+}
+
+void MainMenu::on_startMorrisButton_clicked()
+{
+    QString c1 = ui->comboColorP1->currentText();
+    QString c2 = ui->comboColorP2->currentText();
+
+    MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2));
+    morrisGame->setAttribute(Qt::WA_DeleteOnClose);
+    morrisGame->show();
 
     this->close();
 }

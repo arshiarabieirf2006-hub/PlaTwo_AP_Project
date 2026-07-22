@@ -13,6 +13,8 @@ SOURCES += \
     main.cpp \
     mainmenu.cpp \
     mainwindow.cpp \
+    morrisgameform.cpp \
+    morrisnodeitem.cpp \
     profileform.cpp \
     signupform.cpp \
     store.cpp \
@@ -24,6 +26,8 @@ HEADERS += \
     loginform.h \
     mainmenu.h \
     mainwindow.h \
+    morrisgameform.h \
+    morrisnodeitem.h \
     profileform.h \
     signupform.h \
     store.h \
@@ -35,6 +39,7 @@ FORMS += \
     loginform.ui \
     mainmenu.ui \
     mainwindow.ui \
+    morrisgameform.ui \
     profileform.ui \
     signupform.ui \
     store.ui

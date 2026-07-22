@@ -32,6 +32,8 @@ private slots:
 
     void on_startGameButton_clicked();
 
+    void on_startMorrisButton_clicked();
+
 private:
     Ui::MainMenu *ui;
     QTcpSocket *socket;
