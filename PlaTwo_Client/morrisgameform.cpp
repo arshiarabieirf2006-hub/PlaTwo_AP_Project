@@ -5,8 +5,9 @@
 #include <QDebug>
 #include <QLabel>
 #include <QTimer>
+#include <QMessageBox>
 
-MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Color, QWidget *parent) :
+MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Color, int myPlayerId, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MorrisGameForm),
     m_socket(socket),
@@ -17,7 +18,10 @@ MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Colo
     selectedNode(nullptr)
 {
     ui->setupUi(this);
-myPlayerId = 1;
+
+
+    this->myPlayerId = myPlayerId;
+
     gameState = 1;
     currentPlayer = 1;
     p1PlacedCount = 0;
@@ -25,6 +29,7 @@ myPlayerId = 1;
     p1RemainingCount = 0;
     p2RemainingCount = 0;
     isRemovingPhase = false;
+    isGameOver = false;
 
     scene = new QGraphicsScene(this);
     ui->graphicsView->setScene(scene);
@@ -103,6 +108,7 @@ void MorrisGameForm::drawBoard() {
 
 void MorrisGameForm::onNodeClicked(int row, int col) {
 
+    if (isGameOver) return;
 
     if (currentPlayer != myPlayerId) {
         qDebug() << "It's not your turn! Waiting for Player" << currentPlayer;
@@ -115,6 +121,12 @@ void MorrisGameForm::onNodeClicked(int row, int col) {
     if (isRemovingPhase) {
         int opponent = (currentPlayer == 1) ? 2 : 1;
         if (node->getOwner() == opponent) {
+
+            bool protectedByMill = isPieceInAnyMill(row, col, opponent) && !allOpponentPiecesInMills(opponent);
+            if (protectedByMill) {
+                qDebug() << "Cannot remove a piece that's part of a mill while the opponent has free pieces.";
+                return;
+            }
             sendNetworkMessage(QString("MORRIS_REMOVE %1 %2").arg(row).arg(col));
             applyRemove(row, col);
         }
@@ -161,7 +173,7 @@ void MorrisGameForm::onNodeClicked(int row, int col) {
 
 const int MILLS[16][3][2] = {
 
-    {{0,0},{0,3},{0,6}}, {{1,1},{1,3},{1,5}}, {{2,2},{2,3},{2,4}},
+{{0,0},{0,3},{0,6}}, {{1,1},{1,3},{1,5}}, {{2,2},{2,3},{2,4}},
     {{3,0},{3,1},{3,2}}, {{3,4},{3,5},{3,6}},
     {{4,2},{4,3},{4,4}}, {{5,1},{5,3},{5,5}}, {{6,0},{6,3},{6,6}},
 
@@ -196,6 +208,24 @@ bool MorrisGameForm::checkMill(int row, int col, int player) {
     return false;
 }
 
+bool MorrisGameForm::isPieceInAnyMill(int row, int col, int player) {
+    return checkMill(row, col, player);
+}
+
+bool MorrisGameForm::allOpponentPiecesInMills(int opponent) {
+    for (int r = 0; r < 7; ++r) {
+        for (int c = 0; c < 7; ++c) {
+            MorrisNodeItem *node = boardNodes[r][c];
+            if (node && node->getOwner() == opponent) {
+                if (!checkMill(r, c, opponent)) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 void MorrisGameForm::switchTurn() {
     currentPlayer = (currentPlayer == 1) ? 2 : 1;
     qDebug() << "Now it's Player " << currentPlayer << "'s turn.";
@@ -205,12 +235,24 @@ void MorrisGameForm::switchTurn() {
 }
 
 void MorrisGameForm::checkGameOver() {
+    if (isGameOver) return;
+
     if (gameState == 2) {
+        QString winnerMessage;
         if (p1RemainingCount < 3) {
-            qDebug() << "Player 2 Wins! Player 1 has less than 3 pieces.";
+            winnerMessage = "Player 2 Wins! Player 1 has less than 3 pieces.";
         } else if (p2RemainingCount < 3) {
-            qDebug() << "Player 1 Wins! Player 2 has less than 3 pieces.";
+            winnerMessage = "Player 1 Wins! Player 2 has less than 3 pieces.";
+        } else {
+            return;
         }
+
+
+        isGameOver = true;
+        turnTimer->stop();
+        qDebug() << winnerMessage;
+        QMessageBox::information(this, "Game Over", winnerMessage);
+        this->close();
     }
 }
 
@@ -248,6 +290,8 @@ void MorrisGameForm::resetTurnTimer() {
 }
 
 void MorrisGameForm::onTurnTimerTimeout() {
+    if (isGameOver) return;
+
     turnTimeLeft--;
     updateTimerDisplay();
     qDebug() << "Player " << currentPlayer << " Time Left: " << turnTimeLeft;

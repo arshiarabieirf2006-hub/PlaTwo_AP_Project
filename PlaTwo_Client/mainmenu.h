@@ -34,12 +34,17 @@ private slots:
 
     void on_startMorrisButton_clicked();
 
+    void onSocketReadyRead();
+
 private:
     Ui::MainMenu *ui;
     QTcpSocket *socket;
 
-
     QString loggedInUser;
+
+
+    int myPlayerId;
+    QMetaObject::Connection m_playerIdConnection;
 };
 
 #endif

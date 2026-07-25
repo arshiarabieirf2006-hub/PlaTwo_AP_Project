@@ -5,6 +5,8 @@
 #include <QGraphicsScene>
 #include <QVector>
 #include <QTcpSocket>
+#include "lineitem.h"
+
 namespace Ui {
 class GameForm;
 }
@@ -17,7 +19,7 @@ public:
 
     ~GameForm();
 
-   explicit GameForm(QTcpSocket *serverSocket, QColor color1 = Qt::red, QColor color2 = Qt::blue, QWidget *parent = nullptr);
+    explicit GameForm(QTcpSocket *serverSocket, QColor color1 = Qt::red, QColor color2 = Qt::blue, int myPlayerId = 1, QWidget *parent = nullptr);
 
 private slots:
 
@@ -36,11 +38,16 @@ private:
     int currentPlayer;
     int player1Score;
     int player2Score;
+    int myPlayerId;
 
 
     QVector<QVector<bool>> hLines;
     QVector<QVector<bool>> vLines;
     QVector<QVector<int>> boxes;
+
+
+    QVector<QVector<LineItem*>> hLineItems;
+    QVector<QVector<LineItem*>> vLineItems;
 
 
     bool checkForCompletedBoxes(int row, int col, bool isHoriz);
