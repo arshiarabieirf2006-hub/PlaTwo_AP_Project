@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QGraphicsScene>
 #include <QTcpSocket>
+#include <QTimer>
+#include <QLabel>
 #include "morrisnodeitem.h"
 
 namespace Ui {
@@ -15,21 +17,51 @@ class MorrisGameForm : public QWidget {
 
 public:
     explicit MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Color, QWidget *parent = nullptr);
+    void setMyPlayerId(int id) { myPlayerId = id; updateTimerDisplay(); }
     ~MorrisGameForm();
 
 private slots:
     void onNodeClicked(int row, int col);
+    void onTurnTimerTimeout();
+    void onReadyRead();
 
 private:
+
     Ui::MorrisGameForm *ui;
     QGraphicsScene *scene;
     QTcpSocket *m_socket;
     QColor m_p1Color;
     QColor m_p2Color;
 
+    QTimer *turnTimer;
+    QLabel *statusLabel;
+    int turnTimeLeft;
+    const int TURN_LIMIT = 20;
+
     MorrisNodeItem* boardNodes[7][7];
+    int myPlayerId;
+    int gameState;
+    int currentPlayer;
+    int p1PlacedCount;
+    int p2PlacedCount;
+    int p1RemainingCount;
+    int p2RemainingCount;
+    bool isRemovingPhase;
+    MorrisNodeItem* selectedNode;
 
     void drawBoard();
+    bool checkMill(int row, int col, int player);
+    bool areAdjacent(int r1, int c1, int r2, int c2);
+    void switchTurn();
+    void checkGameOver();
+    void startTurnTimer();
+    void resetTurnTimer();
+    void updateTimerDisplay();
+    void sendNetworkMessage(const QString &msg);
+    void processNetworkMessage(const QString &msg);
+    void applyPlace(int r, int c, int player);
+    void applyMove(int r1, int c1, int r2, int c2, int player);
+    void applyRemove(int r, int c);
 };
 
 #endif // MORRISGAMEFORM_H
