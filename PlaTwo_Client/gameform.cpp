@@ -5,10 +5,11 @@
 #include <QBrush>
 #include <QDebug>
 #include <QMessageBox>
-GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, QWidget *parent)
+GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int myPlayerId, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GameForm)
     , socket(serverSocket)
+    , myPlayerId(myPlayerId)
     , p1Color(color1)
     , p2Color(color2)
 {
@@ -23,10 +24,18 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, QWidg
     player2Score = 0;
 
     hLines.resize(gridSize);
-    for (int i = 0; i < gridSize; ++i) hLines[i].resize(gridSize - 1, false);
+    hLineItems.resize(gridSize);
+    for (int i = 0; i < gridSize; ++i) {
+        hLines[i].resize(gridSize - 1, false);
+        hLineItems[i].resize(gridSize - 1, nullptr);
+    }
 
     vLines.resize(gridSize - 1);
-    for (int i = 0; i < gridSize - 1; ++i) vLines[i].resize(gridSize, false);
+    vLineItems.resize(gridSize - 1);
+    for (int i = 0; i < gridSize - 1; ++i) {
+        vLines[i].resize(gridSize, false);
+        vLineItems[i].resize(gridSize, nullptr);
+    }
 
     boxes.resize(gridSize - 1);
     for (int i = 0; i < gridSize - 1; ++i) boxes[i].resize(gridSize - 1, 0);
@@ -44,6 +53,7 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, QWidg
 
             LineItem *hLine = new LineItem(x, y, dotSpacing, lineThickness, true, row, col);
             scene->addItem(hLine);
+            hLineItems[row][col] = hLine;
 
             connect(hLine, &LineItem::lineClicked, this, &GameForm::onLineClicked);
         }
@@ -56,6 +66,7 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, QWidg
 
             LineItem *vLine = new LineItem(x, y, lineThickness, dotSpacing, false, row, col);
             scene->addItem(vLine);
+            vLineItems[row][col] = vLine;
 
             connect(vLine, &LineItem::lineClicked, this, &GameForm::onLineClicked);
         }
@@ -79,7 +90,12 @@ GameForm::~GameForm()
 
 void GameForm::onLineClicked(int row, int col, bool isHoriz)
 {
+
     if (!isProcessingNetworkMove) {
+        if (currentPlayer != myPlayerId) {
+            qDebug() << "It's not your turn! Waiting for Player" << currentPlayer;
+            return;
+        }
         QString msg = QString("MOVE:%1:%2:%3\n").arg(row).arg(col).arg(isHoriz ? 1 : 0);
         socket->write(msg.toUtf8());
     }
@@ -179,6 +195,16 @@ void GameForm::onServerMessage() {
             int c = parts[2].toInt();
             bool isH = (parts[3] == "1");
 
+            int maxRow = isH ? gridSize : gridSize - 1;
+            int maxCol = isH ? gridSize - 1 : gridSize;
+            if (r < 0 || r >= maxRow || c < 0 || c >= maxCol) {
+                qDebug() << "Ignoring out-of-range network move:" << r << c << isH;
+                continue;
+            }
+
+
+            LineItem *item = isH ? hLineItems[r][c] : vLineItems[r][c];
+            if (item) item->markRemoteClick();
 
             isProcessingNetworkMove = true;
             onLineClicked(r, c, isH);

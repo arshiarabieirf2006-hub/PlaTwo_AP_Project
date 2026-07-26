@@ -5,11 +5,17 @@
 #include "store.h"
 #include "gameform.h"
 #include "morrisgameform.h"
+<<<<<<< HEAD
 #include "fanorona.h"
+=======
+#include <QMessageBox>
+#include <QDebug>
+>>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
 
 MainMenu::MainMenu(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::MainMenu)
+    ui(new Ui::MainMenu),
+    myPlayerId(1)
 {
     ui->setupUi(this);
 
@@ -29,7 +35,11 @@ MainMenu::MainMenu(QWidget *parent) :
     });
 
 
+<<<<<<< HEAD
     connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+=======
+    m_playerIdConnection = connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onSocketReadyRead);
+>>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
 }
 
 MainMenu::~MainMenu()
@@ -42,6 +52,23 @@ void MainMenu::setUsername(const QString &username)
     loggedInUser = username;
 }
 
+void MainMenu::onSocketReadyRead()
+{
+    while (socket->canReadLine()) {
+        QString line = QString::fromUtf8(socket->readLine()).trimmed();
+        if (line.startsWith("PLAYERID:")) {
+            bool ok = false;
+            int id = line.section(':', 1, 1).toInt(&ok);
+            if (ok && (id == 1 || id == 2)) {
+                myPlayerId = id;
+                qDebug() << "Assigned player id:" << myPlayerId;
+            }
+            disconnect(m_playerIdConnection);
+            return;
+        }
+    }
+}
+
 void MainMenu::on_exitButton_clicked()
 {
     QCoreApplication::quit();
@@ -49,7 +76,14 @@ void MainMenu::on_exitButton_clicked()
 
 void MainMenu::on_profileButton_clicked()
 {
+<<<<<<< HEAD
     ProfileForm *profileWindow = new ProfileForm();
+=======
+
+    ProfileForm *profileWindow = new ProfileForm(socket);
+    profileWindow->setAttribute(Qt::WA_DeleteOnClose);
+
+>>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
     profileWindow->loadUserData(loggedInUser);
     profileWindow->show();
 }
@@ -73,11 +107,17 @@ void MainMenu::on_startGameButton_clicked()
     QString c1 = ui->comboColorP1->currentText();
     QString c2 = ui->comboColorP2->currentText();
 
-    GameForm *game = new GameForm(socket, QColor(c1), QColor(c2));
+    if (c1 == c2) {
+        QMessageBox::warning(this, "خطا در انتخاب رنگ", "بازیکن ۱ و بازیکن ۲ نمی‌توانند رنگ یکسان انتخاب کنند!");
+        return;
+    }
+
+    GameForm *game = new GameForm(socket, QColor(c1), QColor(c2), myPlayerId);
     game->setAttribute(Qt::WA_DeleteOnClose);
     game->show();
 
-    this->close();
+
+    this->hide();
 }
 
 void MainMenu::on_startMorrisButton_clicked()
@@ -85,12 +125,18 @@ void MainMenu::on_startMorrisButton_clicked()
     QString c1 = ui->comboColorP1->currentText();
     QString c2 = ui->comboColorP2->currentText();
 
-    MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2));
+    if (c1 == c2) {
+        QMessageBox::warning(this, "خطا در انتخاب رنگ", "بازیکن ۱ و بازیکن ۲ نمی‌توانند رنگ یکسان انتخاب کنند!");
+        return;
+    }
+
+    MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2), myPlayerId);
     morrisGame->setAttribute(Qt::WA_DeleteOnClose);
     morrisGame->show();
 
-    this->close();
+    this->hide();
 }
+<<<<<<< HEAD
 
 void MainMenu::on_pushButton_clicked()
 {
@@ -168,3 +214,5 @@ void MainMenu::onReadyRead()
         }
     }
 }
+=======
+>>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278

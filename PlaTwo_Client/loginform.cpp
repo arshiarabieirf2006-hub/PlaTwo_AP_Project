@@ -4,6 +4,7 @@
 #include "mainmenu.h"
 #include <QMessageBox>
 #include <QCryptographicHash>
+#include "forgotpassworddialog.h"
 
 LoginForm::LoginForm(QWidget *parent)
     : QWidget(parent)
@@ -13,6 +14,8 @@ LoginForm::LoginForm(QWidget *parent)
 
     socket = new QTcpSocket(this);
     connect(socket, &QTcpSocket::readyRead, this, &LoginForm::onReadyRead);
+
+    connect(ui->forgotPasswordButton, &QPushButton::clicked, this, &LoginForm::on_forgotPasswordButton_clicked);
 }
 
 LoginForm::~LoginForm()
@@ -55,7 +58,7 @@ void LoginForm::onReadyRead()
     QByteArray response = socket->readAll();
     QString msg = QString::fromUtf8(response).trimmed();
 
-    if (msg == "LOGIN_SUCCESS") {
+    if (msg.contains("LOGIN_SUCCESS")) {
         QMessageBox::information(this, "Success", "Login successful!");
 
         MainMenu *menu = new MainMenu();
@@ -63,7 +66,7 @@ void LoginForm::onReadyRead()
         menu->show();
 
         this->close();
-    } else {
+    } else if (msg.contains("LOGIN_FAILED")) {
         QMessageBox::critical(this, "Login Failed", "Invalid username or password!");
     }
 }
@@ -74,4 +77,15 @@ void LoginForm::on_SignUp_clicked()
     signUpPage->setAttribute(Qt::WA_DeleteOnClose);
     signUpPage->show();
     this->close();
+}
+
+
+void LoginForm::on_forgotPasswordButton_clicked()
+{
+    disconnect(socket, &QTcpSocket::readyRead, this, &LoginForm::onReadyRead);
+
+    ForgotPasswordDialog dlg(socket, this);
+    dlg.exec();
+
+    connect(socket, &QTcpSocket::readyRead, this, &LoginForm::onReadyRead);
 }

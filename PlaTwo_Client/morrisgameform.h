@@ -16,7 +16,7 @@ class MorrisGameForm : public QWidget {
     Q_OBJECT
 
 public:
-    explicit MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Color, QWidget *parent = nullptr);
+    explicit MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Color, int myPlayerId = 1, QWidget *parent = nullptr);
     void setMyPlayerId(int id) { myPlayerId = id; updateTimerDisplay(); }
     ~MorrisGameForm();
 
@@ -47,10 +47,13 @@ private:
     int p1RemainingCount;
     int p2RemainingCount;
     bool isRemovingPhase;
+    bool isGameOver;
     MorrisNodeItem* selectedNode;
 
     void drawBoard();
     bool checkMill(int row, int col, int player);
+    bool isPieceInAnyMill(int row, int col, int player);
+    bool allOpponentPiecesInMills(int opponent);
     bool areAdjacent(int r1, int c1, int r2, int c2);
     void switchTurn();
     void checkGameOver();

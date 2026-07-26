@@ -30,7 +30,11 @@ public:
 private slots:
     void onNewConnection() {
         QTcpSocket *clientSocket = server->nextPendingConnection();
+
+
+        int assignedId = (clients.size() % 2 == 0) ? 1 : 2;
         clients.append(clientSocket);
+        clientSocket->write(QString("PLAYERID:%1\n").arg(assignedId).toUtf8());
 
         connect(clientSocket, &QTcpSocket::readyRead, this, &ServerController::onReadyRead);
         connect(clientSocket, &QTcpSocket::disconnected, this, &ServerController::onDisconnected);
@@ -41,11 +45,49 @@ private slots:
         if (!clientSocket) return;
 
         QByteArray data = clientSocket->readAll();
-        QString message = QString::fromUtf8(data).trimmed();
+
+
+        const QStringList lines = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
+        for (const QString &raw : lines) {
+            processMessage(clientSocket, raw.trimmed());
+        }
+    }
+
+    void onDisconnected() {
+        QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
+        if (!clientSocket) return;
+
+        clients.removeOne(clientSocket);
+        clientSocket->deleteLater();
+    }
+
+private:
+    QTcpServer *server;
+    QVector<QTcpSocket*> clients;
+
+    void broadcastExcept(QTcpSocket *sender, const QString &message) {
+        for (QTcpSocket* otherClient : std::as_const(clients)) {
+            if (otherClient != sender) {
+                otherClient->write((message + "\n").toUtf8());
+            }
+        }
+    }
+
+    void processMessage(QTcpSocket *clientSocket, const QString &message) {
+        if (message.isEmpty()) return;
+
+
+        if (message.startsWith("MOVE")) {
+            broadcastExcept(clientSocket, message);
+            return;
+        }
+        if (message.startsWith("MORRIS_PLACE") || message.startsWith("MORRIS_MOVE") || message.startsWith("MORRIS_REMOVE")) {
+            broadcastExcept(clientSocket, message);
+            return;
+        }
 
         QStringList parts = message.split(":");
         if (parts.isEmpty()) return;
-
         QString command = parts[0];
 
         if (command == "SIGNUP" && parts.size() >= 6) {
@@ -106,11 +148,7 @@ private slots:
                 file.close();
             }
 
-            if (success) {
-                clientSocket->write("LOGIN_SUCCESS\n");
-            } else {
-                clientSocket->write("LOGIN_FAILED\n");
-            }
+            clientSocket->write(success ? "LOGIN_SUCCESS\n" : "LOGIN_FAILED\n");
         }
         else if (command == "GET_COINS" && parts.size() >= 2) {
             QString username = parts[1];
@@ -207,6 +245,7 @@ private slots:
 
             clientSocket->write(response.toUtf8());
         }
+<<<<<<< HEAD
         else if (message == "REQUEST_FANORONA") {
             if (!fanoronaQueue.contains(clientSocket)) {
                 fanoronaQueue.append(clientSocket);
@@ -233,10 +272,120 @@ private slots:
             for (QTcpSocket* otherClient : std::as_const(clients)) {
                 if (otherClient != clientSocket) {
                     otherClient->write((message + "\n").toUtf8());
+=======
+        else if (command == "FORGOT_PASS" && parts.size() >= 3) {
+            QString username = parts[1];
+            QString newPasswordHash = parts[2];
+
+            QFile file("server_users.txt");
+            QStringList lines;
+            bool userFound = false;
+
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&file);
+                while (!in.atEnd()) {
+                    lines.append(in.readLine());
+>>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
                 }
+                file.close();
+            }
+
+            for (int i = 0; i < lines.size(); ++i) {
+                QStringList details = lines[i].split(",");
+                if (!details.isEmpty() && details[0] == username) {
+                    details[1] = newPasswordHash;
+                    lines[i] = details.join(",");
+                    userFound = true;
+                    break;
+                }
+            }
+
+            if (userFound) {
+                if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+                    QTextStream out(&file);
+                    for (const QString &line : std::as_const(lines)) {
+                        out << line << "\n";
+                    }
+                    file.close();
+                }
+                clientSocket->write("FORGOT_PASS_SUCCESS\n");
+            } else {
+                clientSocket->write("FORGOT_PASS_FAILED\n");
+            }
+        }
+        else if (command == "PROFILE_GET" && parts.size() >= 2) {
+
+            QString username = parts[1];
+            QFile file("server_users.txt");
+            bool found = false;
+
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&file);
+                while (!in.atEnd()) {
+                    QString line = in.readLine();
+                    QStringList details = line.split(",");
+                    if (details.size() >= 6 && details[0] == username) {
+                        clientSocket->write(QString("PROFILE_DATA:" + line + "\n").toUtf8());
+                        found = true;
+                        break;
+                    }
+                }
+                file.close();
+            }
+            if (!found) {
+                clientSocket->write("PROFILE_NOTFOUND\n");
+            }
+        }
+        else if (command == "PROFILE_UPDATE" && parts.size() >= 7) {
+            QString oldUsername = parts[1];
+            QString newUsername = parts[2];
+            QString newPasswordHash = parts[3];
+            QString newEmail = parts[4];
+            QString newName = parts[5];
+            QString newPhone = parts[6];
+
+            QFile file("server_users.txt");
+            QStringList lines;
+            bool userFound = false;
+
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&file);
+                while (!in.atEnd()) {
+                    lines.append(in.readLine());
+                }
+                file.close();
+            }
+
+            for (int i = 0; i < lines.size(); ++i) {
+                if (lines[i].trimmed().isEmpty()) continue;
+                QStringList details = lines[i].split(",");
+                if (details.size() >= 6 && details[0] == oldUsername) {
+                    details[0] = newUsername;
+                    if (!newPasswordHash.isEmpty()) details[1] = newPasswordHash;
+                    details[2] = newEmail;
+                    details[3] = newName;
+                    details[4] = newPhone;
+                    lines[i] = details.join(",");
+                    userFound = true;
+                    break;
+                }
+            }
+
+            if (userFound) {
+                if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+                    QTextStream out(&file);
+                    for (const QString &line : std::as_const(lines)) {
+                        out << line << "\n";
+                    }
+                    file.close();
+                }
+                clientSocket->write("PROFILE_UPDATE_SUCCESS\n");
+            } else {
+                clientSocket->write("PROFILE_UPDATE_FAILED\n");
             }
         }
     }
+<<<<<<< HEAD
 
     void onDisconnected() {
         QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
@@ -262,3 +411,8 @@ private:
 };
 
 #endif
+=======
+};
+
+#endif // SERVERCONTROLLER_H
+>>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278

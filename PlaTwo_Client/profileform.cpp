@@ -1,15 +1,18 @@
 #include "profileform.h"
 #include "ui_profileform.h"
-#include <QFile>
-#include <QTextStream>
 #include <QStringList>
 #include <QMessageBox>
 
-ProfileForm::ProfileForm(QWidget *parent) :
+ProfileForm::ProfileForm(QTcpSocket *socket, QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::ProfileForm)
+    ui(new Ui::ProfileForm),
+    m_socket(socket)
 {
     ui->setupUi(this);
+
+    if (m_socket) {
+        connect(m_socket, &QTcpSocket::readyRead, this, &ProfileForm::onSocketReadyRead);
+    }
 }
 
 ProfileForm::~ProfileForm()
@@ -23,41 +26,52 @@ void ProfileForm::on_backButton_clicked()
     this->close();
 }
 
-
 void ProfileForm::loadUserData(const QString &currentUsername)
 {
-    QFile file("users.txt");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, "Error", "Could not open users.txt to read profile data.");
+
+    currentUser = currentUsername;
+    ui->usernameLineEdit->setText(currentUsername);
+
+    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) {
+        QMessageBox::critical(this, "Error", "Not connected to server - cannot load profile.");
         return;
     }
 
-    QTextStream in(&file);
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        QStringList userDetails = line.split(",");
+    m_socket->write(QString("PROFILE_GET:%1\n").arg(currentUsername).toUtf8());
+}
 
+void ProfileForm::onSocketReadyRead()
+{
+    if (!m_socket) return;
 
-        if (userDetails.size() >= 5 && userDetails[0] == currentUsername) {
+    while (m_socket->canReadLine()) {
+        QString line = QString::fromUtf8(m_socket->readLine()).trimmed();
 
+        if (line.startsWith("PROFILE_DATA:")) {
+            QString data = line.mid(QString("PROFILE_DATA:").length());
+            QStringList details = data.split(",");
+            if (details.size() >= 6) {
+                currentUser = details[0];
+                currentPasswordHash = details[1];
 
-            currentUser = userDetails[0];
-            currentPasswordHash = userDetails[1];
-
-
-            ui->usernameLineEdit->setText(userDetails[0]);
-
+                ui->usernameLineEdit->setText(details[0]);
+                ui->passwordLineEdit->clear();
+                ui->emailLineEdit->setText(details[2]);
+                ui->nameLineEdit->setText(details[3]);
+                ui->phoneLineEdit->setText(details[4]);
+            }
+        } else if (line == "PROFILE_NOTFOUND") {
+            QMessageBox::warning(this, "Error", "Could not find your profile on the server.");
+        } else if (line == "PROFILE_UPDATE_SUCCESS") {
+            currentUser = ui->usernameLineEdit->text().trimmed();
             ui->passwordLineEdit->clear();
-
-            ui->emailLineEdit->setText(userDetails[2]);
-            ui->nameLineEdit->setText(userDetails[3]);
-            ui->phoneLineEdit->setText(userDetails[4]);
-
-            break;
+            QMessageBox::information(this, "Success", "Profile updated successfully!");
+        } else if (line == "PROFILE_UPDATE_FAILED") {
+            QMessageBox::critical(this, "Error", "Could not save updates.");
         }
     }
-    file.close();
 }
+
 void ProfileForm::on_saveButton_clicked()
 {
     QString newUsername = ui->usernameLineEdit->text().trimmed();
@@ -71,53 +85,17 @@ void ProfileForm::on_saveButton_clicked()
         return;
     }
 
-    QString finalPasswordHash = currentPasswordHash;
+    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) {
+        QMessageBox::critical(this, "Error", "Not connected to server - cannot save profile.");
+        return;
+    }
+
+    QString newPasswordHash;
     if (!newPassword.isEmpty()) {
-        QByteArray hashedInput = QCryptographicHash::hash(newPassword.toUtf8(), QCryptographicHash::Sha256).toHex();
-        finalPasswordHash = QString(hashedInput);
+        newPasswordHash = QString(QCryptographicHash::hash(newPassword.toUtf8(), QCryptographicHash::Sha256).toHex());
     }
 
-    QFile file("users.txt");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, "Error", "Could not open database.");
-        return;
-    }
-
-
-    QStringList allLines;
-    QTextStream in(&file);
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        QStringList userDetails = line.split(",");
-
-
-        if (userDetails.size() >= 5 && userDetails[0] == currentUser) {
-            userDetails[0] = newUsername;
-            userDetails[1] = finalPasswordHash;
-            userDetails[2] = newEmail;
-
-            userDetails[3] = newName;
-            userDetails[4] = newPhone;
-
-            line = userDetails.join(",");
-        }
-        allLines.append(line);
-    }
-    file.close();
-
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-        QMessageBox::critical(this, "Error", "Could not save updates.");
-        return;
-    }
-
-    QTextStream out(&file);
-    for (const QString &l : allLines) {
-        out << l << "\n";
-    }
-    file.close();
-
-    currentUser = newUsername;
-    ui->passwordLineEdit->clear();
-    QMessageBox::information(this, "Success", "Profile updated successfully!");
+    QString request = QString("PROFILE_UPDATE:%1:%2:%3:%4:%5:%6\n")
+                          .arg(currentUser, newUsername, newPasswordHash, newEmail, newName, newPhone);
+    m_socket->write(request.toUtf8());
 }
-
