@@ -37,23 +37,16 @@ void LineItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
     QGraphicsRectItem::hoverLeaveEvent(event);
 }
 
-void LineItem::applyClickedStyle() {
+void LineItem::confirmClick(const QColor &color) {
     isClicked = true;
-    QPen pen(Qt::black);
+    QPen pen(color);
     pen.setStyle(Qt::SolidLine);
     pen.setWidth(6);
     setPen(pen);
 }
 
-void LineItem::markRemoteClick() {
-    if (!isClicked) {
-        applyClickedStyle();
-    }
-}
-
 void LineItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (!isClicked) {
-        applyClickedStyle();
         emit lineClicked(row, col, isHorizontal);
     }
     QGraphicsRectItem::mousePressEvent(event);

@@ -121,6 +121,11 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
         QString msg = QString("MOVE:%1:%2:%3\n").arg(row).arg(col).arg(isHoriz ? 1 : 0);
         socket->write(msg.toUtf8());
     }
+
+    LineItem *item = isHoriz ? hLineItems[row][col] : vLineItems[row][col];
+    QColor moveColor = (currentPlayer == 1) ? p1Color : p2Color;
+    if (item) item->confirmClick(moveColor);
+
     if (isHoriz) {
         hLines[row][col] = true;
     } else {
@@ -242,7 +247,10 @@ void GameForm::onServerMessage() {
 
 
             LineItem *item = isH ? hLineItems[r][c] : vLineItems[r][c];
-            if (item) item->markRemoteClick();
+            if (item && item->clicked()) {
+                qDebug() << "Ignoring network move for an already-claimed line:" << r << c << isH;
+                continue;
+            }
 
             isProcessingNetworkMove = true;
             onLineClicked(r, c, isH);

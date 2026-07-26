@@ -5,6 +5,7 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsSceneHoverEvent>
+#include <QColor>
 
 class LineItem : public QObject, public QGraphicsRectItem {
     Q_OBJECT
@@ -13,7 +14,9 @@ public:
     LineItem(int x, int y, int width, int height, bool isHoriz, int r, int c, QGraphicsItem *parent = nullptr);
 
 
-    void markRemoteClick();
+    void confirmClick(const QColor &color);
+
+    bool clicked() const { return isClicked; }
 
 signals:
 
@@ -26,8 +29,6 @@ protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
 private:
-    void applyClickedStyle();
-
     bool isClicked;
     bool isHorizontal;
     int row;
