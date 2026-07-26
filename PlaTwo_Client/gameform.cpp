@@ -170,7 +170,7 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
 }
 void GameForm::onServerMessage() {
     QByteArray data = socket->readAll();
-    QStringList messages = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
+    const QStringList messages = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
 
     for (const QString& msg : messages) {
         QStringList parts = msg.trimmed().split(":");

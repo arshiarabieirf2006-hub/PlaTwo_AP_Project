@@ -4,7 +4,7 @@
 
 #include <QWidget>
 #include <QString>
-
+#include "fanorona.h"
 namespace Ui {
 class MainMenu;
 }
@@ -34,12 +34,19 @@ private slots:
 
     void on_startMorrisButton_clicked();
 
+
+    void on_pushButton_clicked();
+    void sendFanoronaMove(int startRow, int startCol, int endRow, int endCol);
+    void sendFanoronaPass();
+    void onReadyRead();
+
 private:
     Ui::MainMenu *ui;
     QTcpSocket *socket;
 
 
     QString loggedInUser;
+    Fanorona *fanoronaGame = nullptr;
 };
 
 #endif

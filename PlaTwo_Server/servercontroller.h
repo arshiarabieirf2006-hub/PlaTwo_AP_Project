@@ -5,6 +5,8 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QVector>
+#include <QList>
+#include <QMap>
 #include <QFile>
 #include <QTextStream>
 #include <QDebug>
@@ -205,6 +207,28 @@ private slots:
 
             clientSocket->write(response.toUtf8());
         }
+        else if (message == "REQUEST_FANORONA") {
+            if (!fanoronaQueue.contains(clientSocket)) {
+                fanoronaQueue.append(clientSocket);
+            }
+
+            if (fanoronaQueue.size() >= 2) {
+                QTcpSocket* player1 = fanoronaQueue.takeFirst();
+                QTcpSocket* player2 = fanoronaQueue.takeFirst();
+
+                fanoronaOpponents[player1] = player2;
+                fanoronaOpponents[player2] = player1;
+
+                player1->write("START_FANORONA|1\n");
+                player2->write("START_FANORONA|2\n");
+            }
+        }
+        else if (message.startsWith("FANORONA_MOVE") || message.startsWith("FANORONA_PASS")) {
+            if (fanoronaOpponents.contains(clientSocket)) {
+                QTcpSocket* opponent = fanoronaOpponents[clientSocket];
+                opponent->write((message + "\n").toUtf8());
+            }
+        }
         else if (command == "MOVE") {
             for (QTcpSocket* otherClient : std::as_const(clients)) {
                 if (otherClient != clientSocket) {
@@ -218,6 +242,14 @@ private slots:
         QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
         if (!clientSocket) return;
 
+        fanoronaQueue.removeAll(clientSocket);
+
+        if (fanoronaOpponents.contains(clientSocket)) {
+            QTcpSocket* opponent = fanoronaOpponents.take(clientSocket);
+            fanoronaOpponents.remove(opponent);
+            opponent->write("OPPONENT_DISCONNECTED\n");
+        }
+
         clients.removeOne(clientSocket);
         clientSocket->deleteLater();
     }
@@ -225,6 +257,8 @@ private slots:
 private:
     QTcpServer *server;
     QVector<QTcpSocket*> clients;
+    QList<QTcpSocket*> fanoronaQueue;
+    QMap<QTcpSocket*, QTcpSocket*> fanoronaOpponents;
 };
 
-#endif // SERVERCONTROLLER_H
+#endif

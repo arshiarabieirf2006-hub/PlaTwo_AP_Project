@@ -7,6 +7,7 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    fanorona.cpp \
     gameform.cpp \
     leaderboard.cpp \
     loginform.cpp \
@@ -21,6 +22,7 @@ SOURCES += \
     lineitem.cpp
 
 HEADERS += \
+    fanorona.h \
     gameform.h \
     leaderboard.h \
     loginform.h \
