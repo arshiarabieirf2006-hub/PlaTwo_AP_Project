@@ -50,6 +50,8 @@ private:
     bool isGameOver;
     MorrisNodeItem* selectedNode;
 
+    bool waitingForOpponent = false;
+
     void drawBoard();
     bool checkMill(int row, int col, int player);
     bool isPieceInAnyMill(int row, int col, int player);

@@ -5,6 +5,8 @@
 #include <QGraphicsScene>
 #include <QVector>
 #include <QTcpSocket>
+#include <QTimer>
+#include <QLabel>
 #include "lineitem.h"
 
 namespace Ui {
@@ -25,6 +27,7 @@ private slots:
 
     void onLineClicked(int row, int col, bool isHoriz);
     void onServerMessage();
+    void onTurnTimerTimeout();
 
 private:
     Ui::GameForm *ui;
@@ -49,9 +52,23 @@ private:
     QVector<QVector<LineItem*>> hLineItems;
     QVector<QVector<LineItem*>> vLineItems;
 
+    QTimer *turnTimer;
+    QLabel *statusLabel;
+    int turnTimeLeft;
+    const int TURN_LIMIT = 20;
+
 
     bool checkForCompletedBoxes(int row, int col, bool isHoriz);
     bool isProcessingNetworkMove = false;
+
+
+    bool waitingForOpponent = false;
+    QByteArray recvBuffer;
+
+    void switchTurn();
+    void startTurnTimer();
+    void resetTurnTimer();
+    void updateTimerDisplay();
 
     QColor p1Color;
     QColor p2Color;

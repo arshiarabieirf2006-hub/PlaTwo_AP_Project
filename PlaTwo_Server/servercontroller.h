@@ -9,6 +9,7 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QPair>
+#include <QMap>
 #include <algorithm>
 
 class ServerController : public QObject {
@@ -30,9 +31,7 @@ private slots:
         QTcpSocket *clientSocket = server->nextPendingConnection();
 
 
-        int assignedId = (clients.size() % 2 == 0) ? 1 : 2;
         clients.append(clientSocket);
-        clientSocket->write(QString("PLAYERID:%1\n").arg(assignedId).toUtf8());
 
         connect(clientSocket, &QTcpSocket::readyRead, this, &ServerController::onReadyRead);
         connect(clientSocket, &QTcpSocket::disconnected, this, &ServerController::onDisconnected);
@@ -42,12 +41,18 @@ private slots:
         QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
         if (!clientSocket) return;
 
-        QByteArray data = clientSocket->readAll();
 
+        QByteArray &buffer = recvBuffers[clientSocket];
+        buffer += clientSocket->readAll();
 
-        const QStringList lines = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
-        for (const QString &raw : lines) {
-            processMessage(clientSocket, raw.trimmed());
+        int newlineIdx;
+        while ((newlineIdx = buffer.indexOf('\n')) != -1) {
+            QByteArray lineBytes = buffer.left(newlineIdx);
+            buffer.remove(0, newlineIdx + 1);
+            QString line = QString::fromUtf8(lineBytes).trimmed();
+            if (!line.isEmpty()) {
+                processMessage(clientSocket, line);
+            }
         }
     }
 
@@ -56,6 +61,20 @@ private slots:
         if (!clientSocket) return;
 
         clients.removeOne(clientSocket);
+        recvBuffers.remove(clientSocket);
+        playerIdOf.remove(clientSocket);
+
+        if (pendingPlayer == clientSocket) {
+            pendingPlayer = nullptr;
+        }
+
+        QTcpSocket *opponent = opponentMap.value(clientSocket, nullptr);
+        if (opponent) {
+            opponent->write("OPPONENT_DISCONNECTED\n");
+            opponentMap.remove(opponent);
+        }
+        opponentMap.remove(clientSocket);
+
         clientSocket->deleteLater();
     }
 
@@ -63,24 +82,62 @@ private:
     QTcpServer *server;
     QVector<QTcpSocket*> clients;
 
-    void broadcastExcept(QTcpSocket *sender, const QString &message) {
-        for (QTcpSocket* otherClient : std::as_const(clients)) {
-            if (otherClient != sender) {
-                otherClient->write((message + "\n").toUtf8());
-            }
+    QMap<QTcpSocket*, QByteArray> recvBuffers;
+
+
+    QTcpSocket *pendingPlayer = nullptr;
+    QMap<QTcpSocket*, QTcpSocket*> opponentMap;
+    QMap<QTcpSocket*, int> playerIdOf;
+
+    void routeToOpponent(QTcpSocket *sender, const QString &message) {
+        QTcpSocket *opponent = opponentMap.value(sender, nullptr);
+        if (opponent) {
+            opponent->write((message + "\n").toUtf8());
         }
     }
 
     void processMessage(QTcpSocket *clientSocket, const QString &message) {
         if (message.isEmpty()) return;
 
-
         if (message.startsWith("MOVE")) {
-            broadcastExcept(clientSocket, message);
+            routeToOpponent(clientSocket, message);
             return;
         }
         if (message.startsWith("MORRIS_PLACE") || message.startsWith("MORRIS_MOVE") || message.startsWith("MORRIS_REMOVE")) {
-            broadcastExcept(clientSocket, message);
+            routeToOpponent(clientSocket, message);
+            return;
+        }
+        if (message == "SKIP_TURN") {
+
+            routeToOpponent(clientSocket, message);
+            return;
+        }
+        if (message == "JOIN_GAME") {
+
+            if (playerIdOf.contains(clientSocket)) {
+                clientSocket->write(QString("GAMEID:%1\n").arg(playerIdOf[clientSocket]).toUtf8());
+                if (opponentMap.contains(clientSocket)) {
+                    clientSocket->write("OPPONENT_JOINED\n");
+                }
+                return;
+            }
+
+            if (pendingPlayer == nullptr) {
+                pendingPlayer = clientSocket;
+                playerIdOf[clientSocket] = 1;
+                clientSocket->write("GAMEID:1\n");
+            } else {
+                QTcpSocket *opponent = pendingPlayer;
+                pendingPlayer = nullptr;
+
+                playerIdOf[clientSocket] = 2;
+                opponentMap[clientSocket] = opponent;
+                opponentMap[opponent] = clientSocket;
+
+                clientSocket->write("GAMEID:2\n");
+                clientSocket->write("OPPONENT_JOINED\n");
+                opponent->write("OPPONENT_JOINED\n");
+            }
             return;
         }
 

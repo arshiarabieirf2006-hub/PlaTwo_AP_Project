@@ -48,11 +48,21 @@ MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Colo
 
     drawBoard();
 
-    startTurnTimer();
-    updateTimerDisplay();
-
     if (m_socket) {
         connect(m_socket, &QTcpSocket::readyRead, this, &MorrisGameForm::onReadyRead);
+
+        if (m_socket->state() == QAbstractSocket::ConnectedState) {
+            waitingForOpponent = true;
+            m_socket->write("JOIN_GAME\n");
+            statusLabel->setText("Waiting for opponent...");
+            statusLabel->setStyleSheet("font-size: 15px; font-weight: bold; color: #BDC3C7; background-color: rgba(0,0,0,190); border-radius: 8px; padding: 5px;");
+        } else {
+            startTurnTimer();
+            updateTimerDisplay();
+        }
+    } else {
+        startTurnTimer();
+        updateTimerDisplay();
     }
 }
 
@@ -109,6 +119,10 @@ void MorrisGameForm::drawBoard() {
 void MorrisGameForm::onNodeClicked(int row, int col) {
 
     if (isGameOver) return;
+    if (waitingForOpponent) {
+        qDebug() << "Still waiting for an opponent to join.";
+        return;
+    }
 
     if (currentPlayer != myPlayerId) {
         qDebug() << "It's not your turn! Waiting for Player" << currentPlayer;
@@ -361,7 +375,35 @@ void MorrisGameForm::onReadyRead() {
 }
 
 void MorrisGameForm::processNetworkMessage(const QString &msg) {
-    QStringList parts = msg.trimmed().split(" ");
+    QString trimmed = msg.trimmed();
+
+    if (trimmed.startsWith("GAMEID:")) {
+        bool ok = false;
+        int id = trimmed.section(':', 1, 1).toInt(&ok);
+        if (ok && (id == 1 || id == 2)) {
+            myPlayerId = id;
+            qDebug() << "Assigned player id:" << myPlayerId;
+            updateTimerDisplay();
+        }
+        return;
+    }
+
+    if (trimmed == "OPPONENT_JOINED") {
+        waitingForOpponent = false;
+        startTurnTimer();
+        updateTimerDisplay();
+        return;
+    }
+
+    if (trimmed == "OPPONENT_DISCONNECTED") {
+        waitingForOpponent = true;
+        turnTimer->stop();
+        statusLabel->setText("Opponent disconnected");
+        QMessageBox::information(this, "Opponent Disconnected", "Your opponent has left the game.");
+        return;
+    }
+
+    QStringList parts = trimmed.split(" ");
     if (parts.isEmpty()) return;
 
     QString cmd = parts[0];

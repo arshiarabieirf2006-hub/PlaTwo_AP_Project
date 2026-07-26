@@ -33,9 +33,6 @@ MainMenu::MainMenu(QWidget *parent) :
     connect(socket, &QTcpSocket::connected, this, [](){
         qDebug() << "Successfully connected to the server!";
     });
-
-
-    m_playerIdConnection = connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onSocketReadyRead);
 }
 
 MainMenu::~MainMenu()
@@ -46,23 +43,6 @@ MainMenu::~MainMenu()
 void MainMenu::setUsername(const QString &username)
 {
     loggedInUser = username;
-}
-
-void MainMenu::onSocketReadyRead()
-{
-    while (socket->canReadLine()) {
-        QString line = QString::fromUtf8(socket->readLine()).trimmed();
-        if (line.startsWith("PLAYERID:")) {
-            bool ok = false;
-            int id = line.section(':', 1, 1).toInt(&ok);
-            if (ok && (id == 1 || id == 2)) {
-                myPlayerId = id;
-                qDebug() << "Assigned player id:" << myPlayerId;
-            }
-            disconnect(m_playerIdConnection);
-            return;
-        }
-    }
 }
 
 void MainMenu::on_exitButton_clicked()
@@ -91,7 +71,8 @@ void MainMenu::on_leaderboardButton_clicked()
 
 void MainMenu::on_storeButton_clicked()
 {
-    Store *storeWindow = new Store();
+
+    Store *storeWindow = new Store(loggedInUser);
     storeWindow->setAttribute(Qt::WA_DeleteOnClose);
     storeWindow->show();
 }

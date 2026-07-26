@@ -12,10 +12,11 @@ LoginForm::LoginForm(QWidget *parent)
 {
     ui->setupUi(this);
 
+
     socket = new QTcpSocket(this);
     connect(socket, &QTcpSocket::readyRead, this, &LoginForm::onReadyRead);
 
-    connect(ui->forgotPasswordButton, &QPushButton::clicked, this, &LoginForm::on_forgotPasswordButton_clicked);
+
 }
 
 LoginForm::~LoginForm()
@@ -46,11 +47,14 @@ void LoginForm::on_loginButton_clicked()
         }
     }
 
+
+    m_pendingUsername = username;
+
     QByteArray passwordData = password.toUtf8();
     QByteArray hashedPassword = QCryptographicHash::hash(passwordData, QCryptographicHash::Sha256).toHex();
 
     QString request = "LOGIN:" + username + ":" + QString(hashedPassword);
-    socket->write(request.toUtf8());
+    socket->write((request + "\n").toUtf8());
 }
 
 void LoginForm::onReadyRead()
@@ -62,6 +66,7 @@ void LoginForm::onReadyRead()
         QMessageBox::information(this, "Success", "Login successful!");
 
         MainMenu *menu = new MainMenu();
+        menu->setUsername(m_pendingUsername);
         menu->setAttribute(Qt::WA_DeleteOnClose);
         menu->show();
 
@@ -82,6 +87,7 @@ void LoginForm::on_SignUp_clicked()
 
 void LoginForm::on_forgotPasswordButton_clicked()
 {
+
     disconnect(socket, &QTcpSocket::readyRead, this, &LoginForm::onReadyRead);
 
     ForgotPasswordDialog dlg(socket, this);

@@ -80,18 +80,98 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int m
         }
     }
 
+    statusLabel = new QLabel(this);
+    statusLabel->setGeometry(20, 10, 320, 40);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    statusLabel->raise();
+
+    turnTimer = new QTimer(this);
+    connect(turnTimer, &QTimer::timeout, this, &GameForm::onTurnTimerTimeout);
+
     connect(socket, &QTcpSocket::readyRead, this, &GameForm::onServerMessage);
+
+
+    if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+        waitingForOpponent = true;
+        socket->write("JOIN_GAME\n");
+        statusLabel->setText("Waiting for opponent...");
+        statusLabel->setStyleSheet("font-size: 15px; font-weight: bold; color: #BDC3C7; background-color: rgba(0,0,0,190); border-radius: 8px; padding: 5px;");
+    } else {
+        startTurnTimer();
+        updateTimerDisplay();
+    }
 }
 
 GameForm::~GameForm()
 {
+    if (turnTimer) turnTimer->stop();
     delete ui;
+}
+
+void GameForm::switchTurn()
+{
+    currentPlayer = (currentPlayer == 1) ? 2 : 1;
+    qDebug() << "Turn changed. Current player: " << currentPlayer;
+    resetTurnTimer();
+    updateTimerDisplay();
+}
+
+void GameForm::startTurnTimer()
+{
+    turnTimeLeft = TURN_LIMIT;
+    turnTimer->start(1000);
+}
+
+void GameForm::resetTurnTimer()
+{
+    turnTimer->stop();
+    startTurnTimer();
+}
+
+void GameForm::updateTimerDisplay()
+{
+    if (!statusLabel) return;
+
+    bool isMyTurn = (currentPlayer == myPlayerId);
+    QString turnStatus = isMyTurn ? "YOUR TURN" : "Opponent's Turn...";
+
+    statusLabel->setText(QString("%1 - Time: %2s").arg(turnStatus).arg(turnTimeLeft));
+
+    if (isMyTurn) {
+        statusLabel->setStyleSheet("font-size: 15px; font-weight: bold; color: #2ECC71; background-color: rgba(0,0,0,190); border-radius: 8px; padding: 5px;");
+    } else {
+        statusLabel->setStyleSheet("font-size: 15px; font-weight: bold; color: #BDC3C7; background-color: rgba(0,0,0,190); border-radius: 8px; padding: 5px;");
+    }
+}
+
+void GameForm::onTurnTimerTimeout()
+{
+    turnTimeLeft--;
+    updateTimerDisplay();
+
+    if (turnTimeLeft <= 0) {
+        if (currentPlayer == myPlayerId) {
+
+            qDebug() << "Time's up - skipping my turn.";
+            if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+                socket->write("SKIP_TURN\n");
+            }
+            switchTurn();
+        } else {
+
+            resetTurnTimer();
+        }
+    }
 }
 
 void GameForm::onLineClicked(int row, int col, bool isHoriz)
 {
 
     if (!isProcessingNetworkMove) {
+        if (waitingForOpponent) {
+            qDebug() << "Still waiting for an opponent to join.";
+            return;
+        }
         if (currentPlayer != myPlayerId) {
             qDebug() << "It's not your turn! Waiting for Player" << currentPlayer;
             return;
@@ -108,11 +188,13 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
     bool boxCompleted = checkForCompletedBoxes(row, col, isHoriz);
 
     if (!boxCompleted) {
-        currentPlayer = (currentPlayer == 1) ? 2 : 1;
-        qDebug() << "Turn changed. Current player: " << currentPlayer;
+        switchTurn();
     } else {
         qDebug() << "Box completed! Bonus turn for player: " << currentPlayer;
         qDebug() << "Scores -> Player 1: " << player1Score << " | Player 2: " << player2Score;
+
+        resetTurnTimer();
+        updateTimerDisplay();
     }
     int totalBoxes = (gridSize - 1) * (gridSize - 1);
 
@@ -127,6 +209,7 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
             winnerMessage = "It's a draw!";
         }
 
+        turnTimer->stop();
         QMessageBox::information(this, "Game Over", winnerMessage);
 
         this->close();
@@ -185,11 +268,47 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
     return completed;
 }
 void GameForm::onServerMessage() {
-    QByteArray data = socket->readAll();
-    QStringList messages = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
 
-    for (const QString& msg : messages) {
-        QStringList parts = msg.trimmed().split(":");
+    recvBuffer += socket->readAll();
+
+    int newlineIdx;
+    while ((newlineIdx = recvBuffer.indexOf('\n')) != -1) {
+        QString msg = QString::fromUtf8(recvBuffer.left(newlineIdx)).trimmed();
+        recvBuffer.remove(0, newlineIdx + 1);
+        if (msg.isEmpty()) continue;
+
+        if (msg.startsWith("GAMEID:")) {
+            bool ok = false;
+            int id = msg.section(':', 1, 1).toInt(&ok);
+            if (ok && (id == 1 || id == 2)) {
+                myPlayerId = id;
+                qDebug() << "Assigned player id:" << myPlayerId;
+                updateTimerDisplay();
+            }
+            continue;
+        }
+
+        if (msg == "OPPONENT_JOINED") {
+            waitingForOpponent = false;
+            startTurnTimer();
+            updateTimerDisplay();
+            continue;
+        }
+
+        if (msg == "OPPONENT_DISCONNECTED") {
+            waitingForOpponent = true;
+            turnTimer->stop();
+            statusLabel->setText("Opponent disconnected");
+            QMessageBox::information(this, "Opponent Disconnected", "Your opponent has left the game.");
+            continue;
+        }
+
+        if (msg == "SKIP_TURN") {
+            switchTurn();
+            continue;
+        }
+
+        QStringList parts = msg.split(":");
         if (parts.size() >= 4 && parts[0] == "MOVE") {
             int r = parts[1].toInt();
             int c = parts[2].toInt();

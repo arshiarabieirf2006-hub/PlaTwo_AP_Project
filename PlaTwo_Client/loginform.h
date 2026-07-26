@@ -18,13 +18,16 @@ public:
 
 private slots:
     void on_loginButton_clicked();
-void on_SignUp_clicked();
+    void on_SignUp_clicked();
     void on_forgotPasswordButton_clicked();
     void onReadyRead();
 
 private:
     Ui::LoginForm *ui;
     QTcpSocket *socket;
+
+
+    QString m_pendingUsername;
 };
 
 #endif // LOGINFORM_H

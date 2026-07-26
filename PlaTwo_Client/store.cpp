@@ -82,21 +82,28 @@ void Store::on_buyButton_clicked()
 void Store::onReadyRead()
 {
     QByteArray response = socket->readAll();
-    QString msg = QString::fromUtf8(response).trimmed();
 
-    QStringList parts = msg.split(":");
+    const QStringList lines = QString::fromUtf8(response).split("\n", Qt::SkipEmptyParts);
 
-    if (parts[0] == "COINS_RESULT" && parts.size() >= 2) {
-        userCoins = parts[1].toInt();
-        ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
-    }
-    else if (parts[0] == "BUY_SUCCESS" && parts.size() >= 2) {
-        userCoins = parts[1].toInt();
-        ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
-        QMessageBox::information(this, "Success", "Item purchased successfully!");
-    }
-    else if (msg == "BUY_FAILED_NO_COINS") {
-        QMessageBox::critical(this, "Inadequate Funds", "You don't have enough coins!");
+    for (const QString &rawLine : lines) {
+        QString msg = rawLine.trimmed();
+        if (msg.isEmpty()) continue;
+
+        QStringList parts = msg.split(":");
+
+        if (parts[0] == "COINS_RESULT" && parts.size() >= 2) {
+            userCoins = parts[1].toInt();
+            ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
+        }
+        else if (parts[0] == "BUY_SUCCESS" && parts.size() >= 2) {
+            userCoins = parts[1].toInt();
+            ui->coinsLabel->setText("Your Coins: " + QString::number(userCoins));
+            QMessageBox::information(this, "Success", "Item purchased successfully!");
+        }
+        else if (msg == "BUY_FAILED_NO_COINS") {
+            QMessageBox::critical(this, "Inadequate Funds", "You don't have enough coins!");
+        }
+
     }
 }
 

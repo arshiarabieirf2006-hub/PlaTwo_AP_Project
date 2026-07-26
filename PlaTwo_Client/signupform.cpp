@@ -11,6 +11,7 @@ SignUpForm::SignUpForm(QWidget *parent)
 {
     ui->setupUi(this);
 
+
     socket = new QTcpSocket(this);
     connect(socket, &QTcpSocket::readyRead, this, &SignUpForm::onReadyRead);
 }
@@ -68,7 +69,7 @@ void SignUpForm::on_signUpButton_clicked()
     QString hashedPasswordStr = QString(hashedPassword);
 
     QString request = "SIGNUP:" + username + ":" + hashedPasswordStr + ":" + email + ":" + name + ":" + phone;
-    socket->write(request.toUtf8());
+    socket->write((request + "\n").toUtf8());
 }
 
 void SignUpForm::onReadyRead()
@@ -80,8 +81,10 @@ void SignUpForm::onReadyRead()
         QMessageBox::information(this, "Success", "Account created successfully! Please login.");
 
         LoginForm *loginPage = new LoginForm();
+
+        loginPage->setAttribute(Qt::WA_DeleteOnClose);
         loginPage->show();
-        this->hide();
+        this->close();
     } else if (msg == "SIGNUP_DUPLICATE") {
         QMessageBox::warning(this, "Duplicate User", "This username is already taken. Please choose another one.");
     } else {
