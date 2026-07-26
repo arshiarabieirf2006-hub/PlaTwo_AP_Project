@@ -53,8 +53,15 @@ void MainMenu::on_exitButton_clicked()
 
 void MainMenu::on_profileButton_clicked()
 {
+
+    disconnect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+
     ProfileForm *profileWindow = new ProfileForm(socket);
     profileWindow->setAttribute(Qt::WA_DeleteOnClose);
+
+    connect(profileWindow, &QObject::destroyed, this, [this]() {
+        connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+    });
 
     profileWindow->loadUserData(loggedInUser);
     profileWindow->show();

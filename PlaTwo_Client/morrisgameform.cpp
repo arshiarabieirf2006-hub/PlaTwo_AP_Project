@@ -52,15 +52,7 @@ MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Colo
         connect(m_socket, &QTcpSocket::readyRead, this, &MorrisGameForm::onReadyRead);
     }
 
-    // BUG FIX: this used to send "JOIN_GAME" here and wait for an
-    // "OPPONENT_JOINED" reply before ever starting the timer or accepting
-    // clicks. But by the time this widget is constructed, MainMenu has
-    // already matched the two players via REQUEST_MORRIS/START_MORRIS and
-    // handed us our confirmed seat as `myPlayerId` - the server never
-    // implements "JOIN_GAME"/"OPPONENT_JOINED" at all (only
-    // REQUEST_MORRIS/START_MORRIS/MORRIS_*), so the board was stuck
-    // showing "Waiting for opponent..." forever and neither player could
-    // ever click a node.
+
     startTurnTimer();
     updateTimerDisplay();
 }
@@ -372,14 +364,9 @@ void MorrisGameForm::onReadyRead() {
 void MorrisGameForm::processNetworkMessage(const QString &msg) {
     QString trimmed = msg.trimmed();
 
-    // NOTE: "GAMEID:" and "OPPONENT_JOINED" used to be handled here from
-    // an earlier matchmaking design. The server no longer sends either -
-    // player roles are now confirmed up front via REQUEST_MORRIS/
-    // START_MORRIS before this window even exists (see MainMenu).
+
     if (trimmed == "OPPONENT_DISCONNECTED") {
-        // End the match instead of leaving the board stuck waiting for
-        // someone who is never coming back - mirrors Fanorona's
-        // handleDisconnect().
+
         isGameOver = true;
         if (turnTimer) turnTimer->stop();
         QMessageBox::information(this, "Game Over", "Opponent disconnected. You win!");
