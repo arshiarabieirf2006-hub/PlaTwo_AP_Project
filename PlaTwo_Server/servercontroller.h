@@ -32,9 +32,7 @@ private slots:
         QTcpSocket *clientSocket = server->nextPendingConnection();
 
 
-        int assignedId = (clients.size() % 2 == 0) ? 1 : 2;
         clients.append(clientSocket);
-        clientSocket->write(QString("PLAYERID:%1\n").arg(assignedId).toUtf8());
 
         connect(clientSocket, &QTcpSocket::readyRead, this, &ServerController::onReadyRead);
         connect(clientSocket, &QTcpSocket::disconnected, this, &ServerController::onDisconnected);
@@ -46,7 +44,6 @@ private slots:
 
         QByteArray data = clientSocket->readAll();
 
-
         const QStringList lines = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
         for (const QString &raw : lines) {
             processMessage(clientSocket, raw.trimmed());
@@ -57,6 +54,26 @@ private slots:
         QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
         if (!clientSocket) return;
 
+        fanoronaQueue.removeAll(clientSocket);
+        if (fanoronaOpponents.contains(clientSocket)) {
+            QTcpSocket* opponent = fanoronaOpponents.take(clientSocket);
+            fanoronaOpponents.remove(opponent);
+            opponent->write("OPPONENT_DISCONNECTED\n");
+        }
+
+        dotsQueue.removeAll(clientSocket);
+        if (dotsOpponents.contains(clientSocket)) {
+            QTcpSocket* opponent = dotsOpponents.take(clientSocket);
+            dotsOpponents.remove(opponent);
+        }
+
+        morrisQueue.removeAll(clientSocket);
+        if (morrisOpponents.contains(clientSocket)) {
+            QTcpSocket* opponent = morrisOpponents.take(clientSocket);
+            morrisOpponents.remove(opponent);
+            opponent->write("OPPONENT_DISCONNECTED\n");
+        }
+
         clients.removeOne(clientSocket);
         clientSocket->deleteLater();
     }
@@ -64,6 +81,16 @@ private slots:
 private:
     QTcpServer *server;
     QVector<QTcpSocket*> clients;
+
+    QList<QTcpSocket*> fanoronaQueue;
+    QMap<QTcpSocket*, QTcpSocket*> fanoronaOpponents;
+
+
+    QList<QTcpSocket*> dotsQueue;
+    QMap<QTcpSocket*, QTcpSocket*> dotsOpponents;
+
+    QList<QTcpSocket*> morrisQueue;
+    QMap<QTcpSocket*, QTcpSocket*> morrisOpponents;
 
     void broadcastExcept(QTcpSocket *sender, const QString &message) {
         for (QTcpSocket* otherClient : std::as_const(clients)) {
@@ -76,13 +103,83 @@ private:
     void processMessage(QTcpSocket *clientSocket, const QString &message) {
         if (message.isEmpty()) return;
 
+        // --- Dots and Boxes ---
+        if (message == "REQUEST_DOTS") {
+            if (!dotsQueue.contains(clientSocket)) {
+                dotsQueue.append(clientSocket);
+            }
+            if (dotsQueue.size() >= 2) {
+                QTcpSocket* player1 = dotsQueue.takeFirst();
+                QTcpSocket* player2 = dotsQueue.takeFirst();
 
+                dotsOpponents[player1] = player2;
+                dotsOpponents[player2] = player1;
+
+                player1->write("START_DOTS|1\n");
+                player2->write("START_DOTS|2\n");
+            }
+            return;
+        }
         if (message.startsWith("MOVE")) {
-            broadcastExcept(clientSocket, message);
+
+            if (dotsOpponents.contains(clientSocket)) {
+                dotsOpponents[clientSocket]->write((message + "\n").toUtf8());
+            }
+            return;
+        }
+        if (message == "SKIP_TURN") {
+            if (dotsOpponents.contains(clientSocket)) {
+                dotsOpponents[clientSocket]->write("SKIP_TURN\n");
+            }
+            return;
+        }
+
+        if (message == "REQUEST_MORRIS") {
+
+            if (!morrisQueue.contains(clientSocket)) {
+                morrisQueue.append(clientSocket);
+            }
+            if (morrisQueue.size() >= 2) {
+                QTcpSocket* player1 = morrisQueue.takeFirst();
+                QTcpSocket* player2 = morrisQueue.takeFirst();
+
+                morrisOpponents[player1] = player2;
+                morrisOpponents[player2] = player1;
+
+                player1->write("START_MORRIS|1\n");
+                player2->write("START_MORRIS|2\n");
+            }
             return;
         }
         if (message.startsWith("MORRIS_PLACE") || message.startsWith("MORRIS_MOVE") || message.startsWith("MORRIS_REMOVE")) {
-            broadcastExcept(clientSocket, message);
+            if (morrisOpponents.contains(clientSocket)) {
+                morrisOpponents[clientSocket]->write((message + "\n").toUtf8());
+            }
+            return;
+        }
+
+        if (message == "REQUEST_FANORONA") {
+            if (!fanoronaQueue.contains(clientSocket)) {
+                fanoronaQueue.append(clientSocket);
+            }
+
+            if (fanoronaQueue.size() >= 2) {
+                QTcpSocket* player1 = fanoronaQueue.takeFirst();
+                QTcpSocket* player2 = fanoronaQueue.takeFirst();
+
+                fanoronaOpponents[player1] = player2;
+                fanoronaOpponents[player2] = player1;
+
+                player1->write("START_FANORONA|1\n");
+                player2->write("START_FANORONA|2\n");
+            }
+            return;
+        }
+        if (message.startsWith("FANORONA_MOVE") || message.startsWith("FANORONA_PASS")) {
+            if (fanoronaOpponents.contains(clientSocket)) {
+                QTcpSocket* opponent = fanoronaOpponents[clientSocket];
+                opponent->write((message + "\n").toUtf8());
+            }
             return;
         }
 
@@ -245,34 +342,6 @@ private:
 
             clientSocket->write(response.toUtf8());
         }
-<<<<<<< HEAD
-        else if (message == "REQUEST_FANORONA") {
-            if (!fanoronaQueue.contains(clientSocket)) {
-                fanoronaQueue.append(clientSocket);
-            }
-
-            if (fanoronaQueue.size() >= 2) {
-                QTcpSocket* player1 = fanoronaQueue.takeFirst();
-                QTcpSocket* player2 = fanoronaQueue.takeFirst();
-
-                fanoronaOpponents[player1] = player2;
-                fanoronaOpponents[player2] = player1;
-
-                player1->write("START_FANORONA|1\n");
-                player2->write("START_FANORONA|2\n");
-            }
-        }
-        else if (message.startsWith("FANORONA_MOVE") || message.startsWith("FANORONA_PASS")) {
-            if (fanoronaOpponents.contains(clientSocket)) {
-                QTcpSocket* opponent = fanoronaOpponents[clientSocket];
-                opponent->write((message + "\n").toUtf8());
-            }
-        }
-        else if (command == "MOVE") {
-            for (QTcpSocket* otherClient : std::as_const(clients)) {
-                if (otherClient != clientSocket) {
-                    otherClient->write((message + "\n").toUtf8());
-=======
         else if (command == "FORGOT_PASS" && parts.size() >= 3) {
             QString username = parts[1];
             QString newPasswordHash = parts[2];
@@ -285,7 +354,6 @@ private:
                 QTextStream in(&file);
                 while (!in.atEnd()) {
                     lines.append(in.readLine());
->>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
                 }
                 file.close();
             }
@@ -385,34 +453,6 @@ private:
             }
         }
     }
-<<<<<<< HEAD
-
-    void onDisconnected() {
-        QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
-        if (!clientSocket) return;
-
-        fanoronaQueue.removeAll(clientSocket);
-
-        if (fanoronaOpponents.contains(clientSocket)) {
-            QTcpSocket* opponent = fanoronaOpponents.take(clientSocket);
-            fanoronaOpponents.remove(opponent);
-            opponent->write("OPPONENT_DISCONNECTED\n");
-        }
-
-        clients.removeOne(clientSocket);
-        clientSocket->deleteLater();
-    }
-
-private:
-    QTcpServer *server;
-    QVector<QTcpSocket*> clients;
-    QList<QTcpSocket*> fanoronaQueue;
-    QMap<QTcpSocket*, QTcpSocket*> fanoronaOpponents;
-};
-
-#endif
-=======
 };
 
 #endif // SERVERCONTROLLER_H
->>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278

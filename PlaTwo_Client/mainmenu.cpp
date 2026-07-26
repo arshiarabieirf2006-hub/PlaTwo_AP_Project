@@ -5,17 +5,13 @@
 #include "store.h"
 #include "gameform.h"
 #include "morrisgameform.h"
-<<<<<<< HEAD
 #include "fanorona.h"
-=======
 #include <QMessageBox>
 #include <QDebug>
->>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
 
 MainMenu::MainMenu(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::MainMenu),
-    myPlayerId(1)
+    ui(new Ui::MainMenu)
 {
     ui->setupUi(this);
 
@@ -35,11 +31,7 @@ MainMenu::MainMenu(QWidget *parent) :
     });
 
 
-<<<<<<< HEAD
     connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
-=======
-    m_playerIdConnection = connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onSocketReadyRead);
->>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
 }
 
 MainMenu::~MainMenu()
@@ -52,22 +44,7 @@ void MainMenu::setUsername(const QString &username)
     loggedInUser = username;
 }
 
-void MainMenu::onSocketReadyRead()
-{
-    while (socket->canReadLine()) {
-        QString line = QString::fromUtf8(socket->readLine()).trimmed();
-        if (line.startsWith("PLAYERID:")) {
-            bool ok = false;
-            int id = line.section(':', 1, 1).toInt(&ok);
-            if (ok && (id == 1 || id == 2)) {
-                myPlayerId = id;
-                qDebug() << "Assigned player id:" << myPlayerId;
-            }
-            disconnect(m_playerIdConnection);
-            return;
-        }
-    }
-}
+
 
 void MainMenu::on_exitButton_clicked()
 {
@@ -76,14 +53,9 @@ void MainMenu::on_exitButton_clicked()
 
 void MainMenu::on_profileButton_clicked()
 {
-<<<<<<< HEAD
-    ProfileForm *profileWindow = new ProfileForm();
-=======
-
     ProfileForm *profileWindow = new ProfileForm(socket);
     profileWindow->setAttribute(Qt::WA_DeleteOnClose);
 
->>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278
     profileWindow->loadUserData(loggedInUser);
     profileWindow->show();
 }
@@ -112,12 +84,8 @@ void MainMenu::on_startGameButton_clicked()
         return;
     }
 
-    GameForm *game = new GameForm(socket, QColor(c1), QColor(c2), myPlayerId);
-    game->setAttribute(Qt::WA_DeleteOnClose);
-    game->show();
 
-
-    this->hide();
+    socket->write("REQUEST_DOTS\n");
 }
 
 void MainMenu::on_startMorrisButton_clicked()
@@ -130,17 +98,12 @@ void MainMenu::on_startMorrisButton_clicked()
         return;
     }
 
-    MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2), myPlayerId);
-    morrisGame->setAttribute(Qt::WA_DeleteOnClose);
-    morrisGame->show();
-
-    this->hide();
+    QString msg = "REQUEST_MORRIS\n";
+    socket->write(msg.toUtf8());
 }
-<<<<<<< HEAD
 
 void MainMenu::on_pushButton_clicked()
 {
-
     QString msg = "REQUEST_FANORONA";
     socket->write(msg.toUtf8());
 }
@@ -159,60 +122,67 @@ void MainMenu::sendFanoronaPass()
 
 void MainMenu::onReadyRead()
 {
-    QByteArray data = socket->readAll();
-    QString message = QString::fromUtf8(data);
+    while (socket->canReadLine()) {
+        QString message = QString::fromUtf8(socket->readLine()).trimmed();
 
 
-    if (message.startsWith("START_FANORONA")) {
-        QStringList parts = message.split("|");
-        if (parts.size() == 2) {
-            int role = parts[1].toInt();
+        if (message.startsWith("START_DOTS")) {
 
-            if (fanoronaGame != nullptr) {
-                delete fanoronaGame;
+            QStringList parts = message.split("|");
+            if (parts.size() == 2) {
+                disconnect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+
+                int role = parts[1].toInt();
+                QString c1 = ui->comboColorP1->currentText();
+                QString c2 = ui->comboColorP2->currentText();
+
+                GameForm *game = new GameForm(socket, QColor(c1), QColor(c2), role);
+                game->setAttribute(Qt::WA_DeleteOnClose);
+                game->show();
+
+                this->hide();
             }
-
-
-            fanoronaGame = new Fanorona(role);
-            fanoronaGame->setAttribute(Qt::WA_DeleteOnClose);
-
-
-            connect(fanoronaGame, &Fanorona::movePlayed, this, &MainMenu::sendFanoronaMove);
-            connect(fanoronaGame, &Fanorona::turnPassed, this, &MainMenu::sendFanoronaPass);
-
-            fanoronaGame->show();
         }
-    }
-
-    else if (message.startsWith("FANORONA_MOVE")) {
-        QStringList parts = message.split("|");
-        if (parts.size() == 5 && fanoronaGame != nullptr) {
-            int sr = parts[1].toInt();
-            int sc = parts[2].toInt();
-            int er = parts[3].toInt();
-            int ec = parts[4].toInt();
-
-            fanoronaGame->applyOpponentMove(sr, sc, er, ec);
+        else if (message.startsWith("START_FANORONA")) {
+            QStringList parts = message.split("|");
+            if (parts.size() == 2) {
+                int role = parts[1].toInt();
+                if (fanoronaGame != nullptr) delete fanoronaGame;
+                fanoronaGame = new Fanorona(role);
+                fanoronaGame->setAttribute(Qt::WA_DeleteOnClose);
+                connect(fanoronaGame, &Fanorona::movePlayed, this, &MainMenu::sendFanoronaMove);
+                connect(fanoronaGame, &Fanorona::turnPassed, this, &MainMenu::sendFanoronaPass);
+                fanoronaGame->show();
+            }
         }
-    }
-
-    else if (message.startsWith("FANORONA_PASS")) {
-        if (fanoronaGame != nullptr) {
-            fanoronaGame->applyOpponentPass();
+        else if (message.startsWith("FANORONA_MOVE")) {
+            QStringList parts = message.split("|");
+            if (parts.size() == 5 && fanoronaGame != nullptr) {
+                fanoronaGame->applyOpponentMove(parts[1].toInt(), parts[2].toInt(), parts[3].toInt(), parts[4].toInt());
+            }
         }
-    }
-
-    else if (message.startsWith("FANORONA_PASS")) {
-        if (fanoronaGame != nullptr) {
-            fanoronaGame->applyOpponentPass();
+        else if (message.startsWith("FANORONA_PASS")) {
+            if (fanoronaGame != nullptr) fanoronaGame->applyOpponentPass();
         }
-    }
+        else if (message.startsWith("OPPONENT_DISCONNECTED")) {
+            if (fanoronaGame != nullptr) fanoronaGame->handleDisconnect();
+        }
+        else if (message.startsWith("START_MORRIS")) {
 
-    else if (message.startsWith("OPPONENT_DISCONNECTED")) {
-        if (fanoronaGame != nullptr) {
-            fanoronaGame->handleDisconnect();
+            QStringList parts = message.split("|");
+            if (parts.size() == 2) {
+                disconnect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+
+                int role = parts[1].toInt();
+                QString c1 = ui->comboColorP1->currentText();
+                QString c2 = ui->comboColorP2->currentText();
+
+                MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2), role);
+                morrisGame->setAttribute(Qt::WA_DeleteOnClose);
+                morrisGame->show();
+
+                this->hide();
+            }
         }
     }
 }
-=======
->>>>>>> a420f1dfa0fb7761521f6f848030d4dea0cc1278

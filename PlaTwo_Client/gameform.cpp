@@ -5,6 +5,7 @@
 #include <QBrush>
 #include <QDebug>
 #include <QMessageBox>
+#include <QBoxLayout>
 GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int myPlayerId, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GameForm)
@@ -81,15 +82,36 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int m
     }
 
     connect(socket, &QTcpSocket::readyRead, this, &GameForm::onServerMessage);
+
+    statusLabel = new QLabel(this);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    statusLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #D32F2F;");
+
+    QBoxLayout *boxLayout = qobject_cast<QBoxLayout*>(this->layout());
+    if (boxLayout) {
+        boxLayout->insertWidget(0, statusLabel);
+    } else {
+        statusLabel->show();
+    }
+
+    turnTimer = new QTimer(this);
+    connect(turnTimer, &QTimer::timeout, this, &GameForm::onTurnTimerTimeout);
+
+    startTurnTimer();
 }
 
 GameForm::~GameForm()
 {
+    if (turnTimer) turnTimer->stop();
     delete ui;
 }
 
 void GameForm::onLineClicked(int row, int col, bool isHoriz)
 {
+
+    if (isHoriz && hLines[row][col]) return;
+    if (!isHoriz && vLines[row][col]) return;
+
 
     if (!isProcessingNetworkMove) {
         if (currentPlayer != myPlayerId) {
@@ -108,9 +130,10 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
     bool boxCompleted = checkForCompletedBoxes(row, col, isHoriz);
 
     if (!boxCompleted) {
-        currentPlayer = (currentPlayer == 1) ? 2 : 1;
+        switchTurn();
         qDebug() << "Turn changed. Current player: " << currentPlayer;
     } else {
+        resetTurnTimer();
         qDebug() << "Box completed! Bonus turn for player: " << currentPlayer;
         qDebug() << "Scores -> Player 1: " << player1Score << " | Player 2: " << player2Score;
     }
@@ -126,6 +149,8 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
         } else {
             winnerMessage = "It's a draw!";
         }
+
+        if (turnTimer) turnTimer->stop();
 
         QMessageBox::information(this, "Game Over", winnerMessage);
 
@@ -185,11 +210,24 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
     return completed;
 }
 void GameForm::onServerMessage() {
-    QByteArray data = socket->readAll();
-    const QStringList messages = QString::fromUtf8(data).split("\n", Qt::SkipEmptyParts);
 
-    for (const QString& msg : messages) {
-        QStringList parts = msg.trimmed().split(":");
+    recvBuffer += socket->readAll();
+
+    int newlineIndex;
+    while ((newlineIndex = recvBuffer.indexOf('\n')) != -1) {
+        QByteArray lineData = recvBuffer.left(newlineIndex);
+        recvBuffer.remove(0, newlineIndex + 1);
+
+        QString msg = QString::fromUtf8(lineData).trimmed();
+        if (msg.isEmpty()) continue;
+
+
+        if (msg == "SKIP_TURN") {
+            switchTurn();
+            continue;
+        }
+
+        QStringList parts = msg.split(":");
         if (parts.size() >= 4 && parts[0] == "MOVE") {
             int r = parts[1].toInt();
             int c = parts[2].toInt();
@@ -210,5 +248,56 @@ void GameForm::onServerMessage() {
             onLineClicked(r, c, isH);
             isProcessingNetworkMove = false;
         }
+    }
+}
+
+void GameForm::switchTurn()
+{
+    currentPlayer = (currentPlayer == 1) ? 2 : 1;
+    resetTurnTimer();
+}
+
+void GameForm::startTurnTimer()
+{
+    turnTimeLeft = TURN_LIMIT;
+    updateTimerDisplay();
+    if (turnTimer) turnTimer->start(1000);
+}
+
+void GameForm::resetTurnTimer()
+{
+    turnTimeLeft = TURN_LIMIT;
+    updateTimerDisplay();
+    if (turnTimer && !turnTimer->isActive()) {
+        turnTimer->start(1000);
+    }
+}
+
+void GameForm::updateTimerDisplay()
+{
+    if (!statusLabel) return;
+
+    QString playerText = (currentPlayer == myPlayerId) ? "Your Turn" : "Opponent's Turn";
+    statusLabel->setText(QString("%1 — Time: %2").arg(playerText).arg(turnTimeLeft));
+}
+
+void GameForm::onTurnTimerTimeout()
+{
+    if (turnTimeLeft > 0) {
+        turnTimeLeft--;
+        updateTimerDisplay();
+        return;
+    }
+
+    qDebug() << "Turn timer expired for player" << currentPlayer;
+
+
+    if (currentPlayer == myPlayerId) {
+        if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+            socket->write("SKIP_TURN\n");
+        }
+        switchTurn();
+    } else {
+        resetTurnTimer();
     }
 }
