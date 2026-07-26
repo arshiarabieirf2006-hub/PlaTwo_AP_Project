@@ -1,0 +1,166 @@
+/* =========================================================
+   PlaTwo — Global Theme
+   Deep purple background with gold/orange accents.
+   Applied once, application-wide, via QApplication::setStyleSheet
+   in main.cpp — no per-form styling needed anymore.
+   ========================================================= */
+
+* {
+    outline: none;
+}
+
+QWidget {
+    background-color: #241535;
+    color: #f0e6f0;
+    font-family: "Segoe UI", "Vazirmatn", sans-serif;
+    font-size: 14px;
+}
+
+QLabel {
+    background: transparent;
+    color: #f0e6f0;
+}
+
+/* ---------- Buttons ---------- */
+QPushButton {
+    background-color: #f0a868;
+    color: #241535;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-weight: 600;
+}
+QPushButton:hover {
+    background-color: #f7bd8a;
+}
+QPushButton:pressed {
+    background-color: #d68f4f;
+}
+QPushButton:disabled {
+    background-color: #5a4a68;
+    color: #9a8aa8;
+}
+
+/* ---------- Text inputs ---------- */
+QLineEdit, QComboBox, QSpinBox, QTextEdit, QPlainTextEdit {
+    background-color: #33204a;
+    border: 1px solid #5a3f78;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #f0e6f0;
+    selection-background-color: #f0a868;
+    selection-color: #241535;
+}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid #f0a868;
+}
+QLineEdit:disabled, QComboBox:disabled {
+    color: #9a8aa8;
+    background-color: #2a1c3d;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+QComboBox QAbstractItemView {
+    background-color: #33204a;
+    border: 1px solid #5a3f78;
+    selection-background-color: #f0a868;
+    selection-color: #241535;
+    outline: none;
+}
+
+/* ---------- Lists / Tables (leaderboard, store, etc.) ---------- */
+QListWidget, QTableWidget, QTreeWidget {
+    background-color: #2a1c3d;
+    border: 1px solid #5a3f78;
+    border-radius: 6px;
+    gridline-color: #5a3f78;
+    alternate-background-color: #33204a;
+}
+QListWidget::item, QTableWidget::item, QTreeWidget::item {
+    padding: 6px;
+}
+QListWidget::item:selected, QTableWidget::item:selected, QTreeWidget::item:selected {
+    background-color: #f0a868;
+    color: #241535;
+}
+QHeaderView::section {
+    background-color: #3d2a52;
+    color: #f0e6f0;
+    padding: 6px;
+    border: none;
+    border-bottom: 2px solid #f0a868;
+    font-weight: 600;
+}
+
+/* ---------- Scroll bars ---------- */
+QScrollBar:vertical {
+    background: #2a1c3d;
+    width: 12px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #5a3f78;
+    border-radius: 6px;
+    min-height: 24px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #f0a868;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background: #2a1c3d;
+    height: 12px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background: #5a3f78;
+    border-radius: 6px;
+    min-width: 24px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #f0a868;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* ---------- Game boards ---------- */
+/* Leave QGraphicsView's own background as painted by the game code
+   (scene backgrounds etc.) — just give it a clean frame. */
+QGraphicsView {
+    background-color: #1a0f28;
+    border: 2px solid #5a3f78;
+    border-radius: 8px;
+}
+
+/* ---------- Dialogs / message boxes ---------- */
+QDialog {
+    background-color: #241535;
+}
+QMessageBox {
+    background-color: #241535;
+}
+QMessageBox QLabel {
+    color: #f0e6f0;
+}
+
+/* ---------- Group boxes / frames ---------- */
+QGroupBox {
+    border: 1px solid #5a3f78;
+    border-radius: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    font-weight: 600;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 6px;
+    color: #f0a868;
+}
