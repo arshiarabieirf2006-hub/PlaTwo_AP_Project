@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QBoxLayout>
 #include <QResizeEvent>
+
 GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int myPlayerId, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GameForm)
@@ -88,12 +89,9 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int m
     statusLabel->setAlignment(Qt::AlignCenter);
     statusLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #D32F2F;");
 
-    QBoxLayout *boxLayout = qobject_cast<QBoxLayout*>(this->layout());
-    if (boxLayout) {
-        boxLayout->insertWidget(0, statusLabel);
-    } else {
-        statusLabel->show();
-    }
+    // کدهای اصلاح شده برای نمایش درست تایمر در بالای صفحه
+    statusLabel->setGeometry(0, 20, this->width(), 40);
+    statusLabel->show();
 
     turnTimer = new QTimer(this);
     connect(turnTimer, &QTimer::timeout, this, &GameForm::onTurnTimerTimeout);
@@ -120,8 +118,15 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int m
 void GameForm::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
+
+
     if (chatWidget) {
         chatWidget->move(this->width() - chatWidget->width() - 10, this->height() - chatWidget->height() - 10);
+    }
+
+
+    if (statusLabel) {
+        statusLabel->setGeometry(0, 20, this->width(), 40);
     }
 }
 
@@ -133,10 +138,8 @@ GameForm::~GameForm()
 
 void GameForm::onLineClicked(int row, int col, bool isHoriz)
 {
-
     if (isHoriz && hLines[row][col]) return;
     if (!isHoriz && vLines[row][col]) return;
-
 
     if (!isProcessingNetworkMove) {
         if (currentPlayer != myPlayerId) {
@@ -202,24 +205,19 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
                     if (currentPlayer == 1) player1Score++;
                     else player2Score++;
 
-
                     QString playerText = (currentPlayer == 1) ? "P1" : "P2";
                     QGraphicsTextItem *text = new QGraphicsTextItem(playerText);
 
-
                     text->setDefaultTextColor(currentPlayer == 1 ? p1Color : p2Color);
-
 
                     QFont font("Arial", 18, QFont::Bold);
                     text->setFont(font);
-
 
                     int xPos = c * dotSpacing + (dotSpacing / 2) - 16;
                     int yPos = r * dotSpacing + (dotSpacing / 2) - 16;
                     text->setPos(xPos, yPos);
 
                     scene->addItem(text);
-
 
                     return true;
                 }
@@ -239,6 +237,7 @@ bool GameForm::checkForCompletedBoxes(int row, int col, bool isHoriz)
 
     return completed;
 }
+
 void GameForm::onServerMessage() {
 
     recvBuffer += socket->readAll();
@@ -250,7 +249,6 @@ void GameForm::onServerMessage() {
 
         QString msg = QString::fromUtf8(lineData).trimmed();
         if (msg.isEmpty()) continue;
-
 
         if (msg == "SKIP_TURN") {
             switchTurn();
@@ -278,7 +276,6 @@ void GameForm::onServerMessage() {
                 qDebug() << "Ignoring out-of-range network move:" << r << c << isH;
                 continue;
             }
-
 
             LineItem *item = isH ? hLineItems[r][c] : vLineItems[r][c];
             if (item && item->clicked()) {
@@ -332,7 +329,6 @@ void GameForm::onTurnTimerTimeout()
     }
 
     qDebug() << "Turn timer expired for player" << currentPlayer;
-
 
     if (currentPlayer == myPlayerId) {
         if (socket && socket->state() == QAbstractSocket::ConnectedState) {
