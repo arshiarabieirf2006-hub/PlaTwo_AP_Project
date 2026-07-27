@@ -180,7 +180,17 @@ void Fanorona::mousePressEvent(QMouseEvent *event)
 
     if (event->button() != Qt::LeftButton) return;
 
-    QPointF scenePos = view->mapToScene(event->pos());
+    // event->pos() is relative to the whole Fanorona widget, which includes
+    // timerLabel and turnLabel stacked above the board — using it directly
+    // ignores that offset and misaligns every click vertically (this is
+    // what was causing the top row to register as a lower row). Convert
+    // through the view's viewport instead, which is the coordinate system
+    // QGraphicsView::mapToScene actually expects.
+    QPoint viewportPos = view->viewport()->mapFromGlobal(event->globalPosition().toPoint());
+    if (!view->viewport()->rect().contains(viewportPos)) {
+        return; // click landed outside the board itself (e.g. on a label)
+    }
+    QPointF scenePos = view->mapToScene(viewportPos);
     int c = (int)(scenePos.x() + CELL_SIZE / 2) / CELL_SIZE;
     int r = (int)(scenePos.y() + CELL_SIZE / 2) / CELL_SIZE;
 
