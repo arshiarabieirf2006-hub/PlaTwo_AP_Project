@@ -4,6 +4,10 @@
 
 #include <QWidget>
 #include <QString>
+#include <QTableWidget>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QHeaderView>
 #include "fanorona.h"
 namespace Ui {
 class MainMenu;
@@ -22,22 +26,16 @@ public:
 
 private slots:
     void on_exitButton_clicked();
-
-
     void on_profileButton_clicked();
-
     void on_leaderboardButton_clicked();
-
     void on_storeButton_clicked();
-
     void on_startGameButton_clicked();
-
     void on_startMorrisButton_clicked();
-
     void on_pushButton_clicked();
     void sendFanoronaMove(int startRow, int startCol, int endRow, int endCol);
     void sendFanoronaPass();
     void onReadyRead();
+    void requestHistory();
 
 
 private:
@@ -46,6 +44,7 @@ private:
 
     QString loggedInUser;
     Fanorona *fanoronaGame = nullptr;
+    void showHistoryDialog(const QString &data);
 
 
 };

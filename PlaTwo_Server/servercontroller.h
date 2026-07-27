@@ -31,7 +31,6 @@ private slots:
     void onNewConnection() {
         QTcpSocket *clientSocket = server->nextPendingConnection();
 
-
         clients.append(clientSocket);
 
         connect(clientSocket, &QTcpSocket::readyRead, this, &ServerController::onReadyRead);
@@ -85,7 +84,6 @@ private:
     QList<QTcpSocket*> fanoronaQueue;
     QMap<QTcpSocket*, QTcpSocket*> fanoronaOpponents;
 
-
     QList<QTcpSocket*> dotsQueue;
     QMap<QTcpSocket*, QTcpSocket*> dotsOpponents;
 
@@ -102,7 +100,6 @@ private:
 
     void processMessage(QTcpSocket *clientSocket, const QString &message) {
         if (message.isEmpty()) return;
-
 
         if (message.startsWith("CHAT_TEXT:") || message.startsWith("CHAT_STICKER:")) {
             QTcpSocket* opponent = nullptr;
@@ -134,7 +131,6 @@ private:
             return;
         }
         if (message.startsWith("MOVE")) {
-
             if (dotsOpponents.contains(clientSocket)) {
                 dotsOpponents[clientSocket]->write((message + "\n").toUtf8());
             }
@@ -148,7 +144,6 @@ private:
         }
 
         if (message == "REQUEST_MORRIS") {
-
             if (!morrisQueue.contains(clientSocket)) {
                 morrisQueue.append(clientSocket);
             }
@@ -465,7 +460,53 @@ private:
                 clientSocket->write("PROFILE_UPDATE_FAILED\n");
             }
         }
+
+
+        else if (command == "SAVE_HISTORY" && parts.size() >= 8) {
+            QString username = parts[1];
+            QString gameName = parts[2];
+            QString opponent = parts[3];
+            QString role = parts[4];
+            QString winner = parts[5];
+            QString score = parts[6];
+            QString date = parts[7];
+
+            QFile file("server_history.txt");
+            if (file.open(QIODevice::Append | QIODevice::Text)) {
+                QTextStream out(&file);
+                out << username << "," << gameName << "," << opponent << "," << role << "," << winner << "," << score << "," << date << "\n";
+                file.close();
+                clientSocket->write("SAVE_HISTORY_SUCCESS\n");
+            } else {
+                clientSocket->write("SAVE_HISTORY_FAILED\n");
+            }
+        }
+        else if (command == "GET_HISTORY" && parts.size() >= 2) {
+            QString username = parts[1];
+            QStringList userHistory;
+
+            QFile file("server_history.txt");
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&file);
+                while (!in.atEnd()) {
+                    QString line = in.readLine();
+                    QStringList details = line.split(",");
+                    if (details.size() >= 7 && details[0] == username) {
+                        userHistory.append(line);
+                    }
+                }
+                file.close();
+            }
+
+            if (userHistory.isEmpty()) {
+                clientSocket->write("HISTORY_RESULT:EMPTY\n");
+            } else {
+                QString response = "HISTORY_RESULT:" + userHistory.join(";") + "\n";
+                clientSocket->write(response.toUtf8());
+            }
+        }
+
     }
 };
 
-#endif // SERVERCONTROLLER_H
+#endif

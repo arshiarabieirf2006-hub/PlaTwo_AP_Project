@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QBoxLayout>
 #include <QResizeEvent>
+#include <QDateTime>
 
 GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int myPlayerId, QWidget *parent)
     : QWidget(parent)
@@ -89,7 +90,6 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int m
     statusLabel->setAlignment(Qt::AlignCenter);
     statusLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #D32F2F;");
 
-    // کدهای اصلاح شده برای نمایش درست تایمر در بالای صفحه
     statusLabel->setGeometry(0, 20, this->width(), 40);
     statusLabel->show();
 
@@ -119,11 +119,9 @@ void GameForm::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
 
-
     if (chatWidget) {
         chatWidget->move(this->width() - chatWidget->width() - 10, this->height() - chatWidget->height() - 10);
     }
-
 
     if (statusLabel) {
         statusLabel->setGeometry(0, 20, this->width(), 40);
@@ -174,13 +172,29 @@ void GameForm::onLineClicked(int row, int col, bool isHoriz)
 
     if (player1Score + player2Score == totalBoxes) {
         QString winnerMessage;
+        QString winnerStr;
 
         if (player1Score > player2Score) {
             winnerMessage = "Congratulations! Player 1 wins!";
+            winnerStr = "Player 1";
         } else if (player2Score > player1Score) {
             winnerMessage = "Congratulations! Player 2 wins!";
+            winnerStr = "Player 2";
         } else {
             winnerMessage = "It's a draw!";
+            winnerStr = "Draw";
+        }
+
+        if (!myUsername.isEmpty() && socket && socket->state() == QAbstractSocket::ConnectedState) {
+            QString roleStr = (myPlayerId == 1) ? "Player 1" : "Player 2";
+            QString scoreStr = QString("%1-%2").arg(player1Score).arg(player2Score);
+
+            // رفع باگ: جایگزینی : با - برای جلوگیری از مشکل در split سرور
+            QString dateStr = QDateTime::currentDateTime().toString("yyyy/MM/dd hh-mm");
+
+            QString historyCmd = QString("SAVE_HISTORY:%1:Dots And Boxes:Opponent:%2:%3:%4:%5\n")
+                                     .arg(myUsername, roleStr, winnerStr, scoreStr, dateStr);
+            socket->write(historyCmd.toUtf8());
         }
 
         if (turnTimer) turnTimer->stop();

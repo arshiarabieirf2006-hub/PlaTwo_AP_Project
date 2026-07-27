@@ -9,7 +9,7 @@
 #include <QLabel>
 #include "lineitem.h"
 #include "chatwidget.h"
-
+#include <QDateTime>
 namespace Ui {
 class GameForm;
 }
@@ -23,6 +23,8 @@ public:
     ~GameForm();
 
     explicit GameForm(QTcpSocket *serverSocket, QColor color1 = Qt::red, QColor color2 = Qt::blue, int myPlayerId = 1, QWidget *parent = nullptr);
+
+    void setUsername(const QString &user) { myUsername = user; }
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -47,7 +49,7 @@ private:
     int player2Score;
     int myPlayerId;
 
-
+    QString myUsername;
     QVector<QVector<bool>> hLines;
     QVector<QVector<bool>> vLines;
     QVector<QVector<int>> boxes;

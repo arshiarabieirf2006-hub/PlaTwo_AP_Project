@@ -15,6 +15,9 @@ MainMenu::MainMenu(QWidget *parent) :
 {
     ui->setupUi(this);
 
+
+    connect(ui->pushButton_2, &QPushButton::clicked, this, &MainMenu::requestHistory);
+
     QStringList colors = {"Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink", "Cyan", "Brown"};
 
     ui->comboColorP1->addItems(colors);
@@ -30,7 +33,6 @@ MainMenu::MainMenu(QWidget *parent) :
         qDebug() << "Successfully connected to the server!";
     });
 
-
     connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
 }
 
@@ -44,8 +46,6 @@ void MainMenu::setUsername(const QString &username)
     loggedInUser = username;
 }
 
-
-
 void MainMenu::on_exitButton_clicked()
 {
     QCoreApplication::quit();
@@ -53,7 +53,6 @@ void MainMenu::on_exitButton_clicked()
 
 void MainMenu::on_profileButton_clicked()
 {
-
     disconnect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
 
     ProfileForm *profileWindow = new ProfileForm(socket);
@@ -90,7 +89,6 @@ void MainMenu::on_startGameButton_clicked()
         QMessageBox::warning(this, "خطا در انتخاب رنگ", "بازیکن ۱ و بازیکن ۲ نمی‌توانند رنگ یکسان انتخاب کنند!");
         return;
     }
-
 
     socket->write("REQUEST_DOTS\n");
 }
@@ -131,10 +129,9 @@ void MainMenu::onReadyRead()
 {
     while (socket->canReadLine()) {
         QString message = QString::fromUtf8(socket->readLine()).trimmed();
-
+        qDebug() << "Client received:" << message;
 
         if (message.startsWith("START_DOTS")) {
-
             QStringList parts = message.split("|");
             if (parts.size() == 2) {
                 disconnect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
@@ -144,7 +141,11 @@ void MainMenu::onReadyRead()
                 QString c2 = ui->comboColorP2->currentText();
 
                 GameForm *game = new GameForm(socket, QColor(c1), QColor(c2), role);
+                game->setUsername(loggedInUser);
                 game->setAttribute(Qt::WA_DeleteOnClose);
+                connect(game, &QObject::destroyed, this, [this]() {
+                    connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+                });
                 game->show();
                 return;
             }
@@ -180,7 +181,6 @@ void MainMenu::onReadyRead()
             if (fanoronaGame != nullptr) fanoronaGame->handleDisconnect();
         }
         else if (message.startsWith("CHAT_TEXT:")) {
-
             if (fanoronaGame != nullptr) {
                 fanoronaGame->receiveChatText(message.mid(QString("CHAT_TEXT:").length()));
             }
@@ -191,7 +191,6 @@ void MainMenu::onReadyRead()
             }
         }
         else if (message.startsWith("START_MORRIS")) {
-
             QStringList parts = message.split("|");
             if (parts.size() == 2) {
                 disconnect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
@@ -202,9 +201,73 @@ void MainMenu::onReadyRead()
 
                 MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2), role);
                 morrisGame->setAttribute(Qt::WA_DeleteOnClose);
+                connect(morrisGame, &QObject::destroyed, this, [this]() {
+                    connect(socket, &QTcpSocket::readyRead, this, &MainMenu::onReadyRead);
+                });
                 morrisGame->show();
                 return;
             }
         }
+        else if (message.startsWith("HISTORY_RESULT:")) {
+            QString data = message.mid(QString("HISTORY_RESULT:").length());
+            showHistoryDialog(data);
+        }
     }
+}
+
+void MainMenu::requestHistory()
+{
+
+    QMessageBox::information(this, "کلاینت", "دکمه تاریخچه کلیک شد! درخواست به سرور ارسال می‌شود...");
+
+    if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+        QString msg = QString("GET_HISTORY:%1\n").arg(loggedInUser);
+        socket->write(msg.toUtf8());
+    } else {
+        QMessageBox::warning(this, "Error", "Not connected to server!");
+    }
+}
+
+void MainMenu::showHistoryDialog(const QString &data)
+{
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("Game History");
+    dialog->resize(700, 400);
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QTableWidget *table = new QTableWidget(dialog);
+
+    table->setColumnCount(6);
+    table->setHorizontalHeaderLabels({"Game", "Opponent", "Role", "Winner", "Score", "Date & Time"});
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setStyleSheet("QTableWidget { font-size: 14px; } QHeaderView::section { font-weight: bold; background-color: #2b2b2b; color: white; }");
+
+    if (data == "EMPTY") {
+        table->setRowCount(1);
+        table->setItem(0, 0, new QTableWidgetItem("No games played yet."));
+        table->setSpan(0, 0, 1, 6);
+        table->item(0, 0)->setTextAlignment(Qt::AlignCenter);
+    } else {
+        QStringList games = data.split(";", Qt::SkipEmptyParts);
+        table->setRowCount(games.size());
+        for (int i = 0; i < games.size(); ++i) {
+            QStringList details = games[i].split(",");
+            if (details.size() >= 7) {
+                table->setItem(i, 0, new QTableWidgetItem(details[1]));
+                table->setItem(i, 1, new QTableWidgetItem(details[2]));
+                table->setItem(i, 2, new QTableWidgetItem(details[3]));
+                table->setItem(i, 3, new QTableWidgetItem(details[4]));
+                table->setItem(i, 4, new QTableWidgetItem(details[5]));
+
+                QString displayDate = details[6];
+                displayDate.replace("-", ":");
+                table->setItem(i, 5, new QTableWidgetItem(displayDate));
+            }
+        }
+    }
+
+    layout->addWidget(table);
+    dialog->exec();
 }
