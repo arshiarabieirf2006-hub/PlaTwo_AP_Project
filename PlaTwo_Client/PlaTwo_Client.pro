@@ -7,6 +7,7 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    chatwidget.cpp \
     fanorona.cpp \
     forgotpassworddialog.cpp \
     gameform.cpp \
@@ -24,6 +25,7 @@ SOURCES += \
     resources.qrc
 
 HEADERS += \
+    chatwidget.h \
     fanorona.h \
     forgotpassworddialog.h \
     gameform.h \

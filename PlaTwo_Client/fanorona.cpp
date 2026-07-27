@@ -30,6 +30,12 @@ Fanorona::Fanorona(int playerRole, QWidget *parent) : QWidget(parent), myPlayerR
     layout->addWidget(view);
     this->setLayout(layout);
 
+    chatWidget = new ChatWidget(this);
+    chatWidget->setFixedHeight(180);
+    layout->addWidget(chatWidget);
+    connect(chatWidget, &ChatWidget::sendTextRequested, this, &Fanorona::chatTextSent);
+    connect(chatWidget, &ChatWidget::sendStickerRequested, this, &Fanorona::chatStickerSent);
+
     scene->setBackgroundBrush(QBrush(QColor(232, 195, 150)));
 
     view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -180,15 +186,10 @@ void Fanorona::mousePressEvent(QMouseEvent *event)
 
     if (event->button() != Qt::LeftButton) return;
 
-    // event->pos() is relative to the whole Fanorona widget, which includes
-    // timerLabel and turnLabel stacked above the board — using it directly
-    // ignores that offset and misaligns every click vertically (this is
-    // what was causing the top row to register as a lower row). Convert
-    // through the view's viewport instead, which is the coordinate system
-    // QGraphicsView::mapToScene actually expects.
+
     QPoint viewportPos = view->viewport()->mapFromGlobal(event->globalPosition().toPoint());
     if (!view->viewport()->rect().contains(viewportPos)) {
-        return; // click landed outside the board itself (e.g. on a label)
+        return;
     }
     QPointF scenePos = view->mapToScene(viewportPos);
     int c = (int)(scenePos.x() + CELL_SIZE / 2) / CELL_SIZE;
@@ -352,4 +353,14 @@ void Fanorona::handleDisconnect()
     gameTimer->stop();
     QMessageBox::information(this, "Game Over", "Opponent disconnected. You Win!");
     this->close();
+}
+
+void Fanorona::receiveChatText(const QString &text)
+{
+    chatWidget->addIncomingText(text);
+}
+
+void Fanorona::receiveChatSticker(int stickerIndex)
+{
+    chatWidget->addIncomingSticker(stickerIndex);
 }

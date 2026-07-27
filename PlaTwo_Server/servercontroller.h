@@ -103,6 +103,19 @@ private:
     void processMessage(QTcpSocket *clientSocket, const QString &message) {
         if (message.isEmpty()) return;
 
+
+        if (message.startsWith("CHAT_TEXT:") || message.startsWith("CHAT_STICKER:")) {
+            QTcpSocket* opponent = nullptr;
+            if (dotsOpponents.contains(clientSocket)) opponent = dotsOpponents[clientSocket];
+            else if (morrisOpponents.contains(clientSocket)) opponent = morrisOpponents[clientSocket];
+            else if (fanoronaOpponents.contains(clientSocket)) opponent = fanoronaOpponents[clientSocket];
+
+            if (opponent) {
+                opponent->write((message + "\n").toUtf8());
+            }
+            return;
+        }
+
         // --- Dots and Boxes ---
         if (message == "REQUEST_DOTS") {
             if (!dotsQueue.contains(clientSocket)) {

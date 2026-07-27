@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QBoxLayout>
+#include <QResizeEvent>
 GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int myPlayerId, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GameForm)
@@ -97,7 +98,31 @@ GameForm::GameForm(QTcpSocket *serverSocket, QColor color1, QColor color2, int m
     turnTimer = new QTimer(this);
     connect(turnTimer, &QTimer::timeout, this, &GameForm::onTurnTimerTimeout);
 
+    chatWidget = new ChatWidget(this);
+    chatWidget->resize(260, 260);
+    chatWidget->move(this->width() - chatWidget->width() - 10, this->height() - chatWidget->height() - 10);
+    chatWidget->show();
+
+    connect(chatWidget, &ChatWidget::sendTextRequested, this, [this](const QString &text) {
+        if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+            socket->write(("CHAT_TEXT:" + text + "\n").toUtf8());
+        }
+    });
+    connect(chatWidget, &ChatWidget::sendStickerRequested, this, [this](int index) {
+        if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+            socket->write(QString("CHAT_STICKER:%1\n").arg(index).toUtf8());
+        }
+    });
+
     startTurnTimer();
+}
+
+void GameForm::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    if (chatWidget) {
+        chatWidget->move(this->width() - chatWidget->width() - 10, this->height() - chatWidget->height() - 10);
+    }
 }
 
 GameForm::~GameForm()
@@ -229,6 +254,15 @@ void GameForm::onServerMessage() {
 
         if (msg == "SKIP_TURN") {
             switchTurn();
+            continue;
+        }
+
+        if (msg.startsWith("CHAT_TEXT:")) {
+            chatWidget->addIncomingText(msg.mid(QString("CHAT_TEXT:").length()));
+            continue;
+        }
+        if (msg.startsWith("CHAT_STICKER:")) {
+            chatWidget->addIncomingSticker(msg.mid(QString("CHAT_STICKER:").length()).toInt());
             continue;
         }
 

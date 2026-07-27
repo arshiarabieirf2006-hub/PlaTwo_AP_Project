@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QLabel>
 #include "lineitem.h"
+#include "chatwidget.h"
 
 namespace Ui {
 class GameForm;
@@ -22,6 +23,9 @@ public:
     ~GameForm();
 
     explicit GameForm(QTcpSocket *serverSocket, QColor color1 = Qt::red, QColor color2 = Qt::blue, int myPlayerId = 1, QWidget *parent = nullptr);
+
+protected:
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
 
@@ -56,6 +60,8 @@ private:
     QLabel *statusLabel;
     int turnTimeLeft;
     const int TURN_LIMIT = 20;
+
+    ChatWidget *chatWidget;
 
 
     bool checkForCompletedBoxes(int row, int col, bool isHoriz);

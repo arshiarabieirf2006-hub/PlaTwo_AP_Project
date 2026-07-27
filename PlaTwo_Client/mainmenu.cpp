@@ -146,8 +146,7 @@ void MainMenu::onReadyRead()
                 GameForm *game = new GameForm(socket, QColor(c1), QColor(c2), role);
                 game->setAttribute(Qt::WA_DeleteOnClose);
                 game->show();
-
-                this->hide();
+                return;
             }
         }
         else if (message.startsWith("START_FANORONA")) {
@@ -159,6 +158,12 @@ void MainMenu::onReadyRead()
                 fanoronaGame->setAttribute(Qt::WA_DeleteOnClose);
                 connect(fanoronaGame, &Fanorona::movePlayed, this, &MainMenu::sendFanoronaMove);
                 connect(fanoronaGame, &Fanorona::turnPassed, this, &MainMenu::sendFanoronaPass);
+                connect(fanoronaGame, &Fanorona::chatTextSent, this, [this](const QString &text) {
+                    socket->write(("CHAT_TEXT:" + text + "\n").toUtf8());
+                });
+                connect(fanoronaGame, &Fanorona::chatStickerSent, this, [this](int index) {
+                    socket->write(QString("CHAT_STICKER:%1\n").arg(index).toUtf8());
+                });
                 fanoronaGame->show();
             }
         }
@@ -174,6 +179,17 @@ void MainMenu::onReadyRead()
         else if (message.startsWith("OPPONENT_DISCONNECTED")) {
             if (fanoronaGame != nullptr) fanoronaGame->handleDisconnect();
         }
+        else if (message.startsWith("CHAT_TEXT:")) {
+
+            if (fanoronaGame != nullptr) {
+                fanoronaGame->receiveChatText(message.mid(QString("CHAT_TEXT:").length()));
+            }
+        }
+        else if (message.startsWith("CHAT_STICKER:")) {
+            if (fanoronaGame != nullptr) {
+                fanoronaGame->receiveChatSticker(message.mid(QString("CHAT_STICKER:").length()).toInt());
+            }
+        }
         else if (message.startsWith("START_MORRIS")) {
 
             QStringList parts = message.split("|");
@@ -187,8 +203,7 @@ void MainMenu::onReadyRead()
                 MorrisGameForm *morrisGame = new MorrisGameForm(socket, QColor(c1), QColor(c2), role);
                 morrisGame->setAttribute(Qt::WA_DeleteOnClose);
                 morrisGame->show();
-
-                this->hide();
+                return;
             }
         }
     }

@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QLabel>
 #include <QMessageBox>
+#include "chatwidget.h"
 
 class Fanorona : public QWidget
 {
@@ -23,10 +24,14 @@ public:
 signals:
     void movePlayed(int startRow, int startCol, int endRow, int endCol);
     void turnPassed();
+    void chatTextSent(const QString &text);
+    void chatStickerSent(int stickerIndex);
 
 public slots:
     void applyOpponentMove(int startRow, int startCol, int endRow, int endCol);
     void applyOpponentPass();
+    void receiveChatText(const QString &text);
+    void receiveChatSticker(int stickerIndex);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -38,6 +43,7 @@ private:
     QGraphicsScene *scene;
     QGraphicsView *view;
     QVBoxLayout *layout;
+    ChatWidget *chatWidget;
 
     int board[5][9];
     const int CELL_SIZE = 80;

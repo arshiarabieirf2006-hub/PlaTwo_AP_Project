@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QTimer>
 #include <QMessageBox>
+#include <QResizeEvent>
 
 MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Color, int myPlayerId, QWidget *parent) :
     QWidget(parent),
@@ -48,6 +49,18 @@ MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Colo
 
     drawBoard();
 
+    chatWidget = new ChatWidget(this);
+    chatWidget->resize(260, 260);
+    chatWidget->move(this->width() - chatWidget->width() - 10, this->height() - chatWidget->height() - 10);
+    chatWidget->show();
+
+    connect(chatWidget, &ChatWidget::sendTextRequested, this, [this](const QString &text) {
+        sendNetworkMessage("CHAT_TEXT:" + text);
+    });
+    connect(chatWidget, &ChatWidget::sendStickerRequested, this, [this](int index) {
+        sendNetworkMessage(QString("CHAT_STICKER:%1").arg(index));
+    });
+
     if (m_socket) {
         connect(m_socket, &QTcpSocket::readyRead, this, &MorrisGameForm::onReadyRead);
     }
@@ -55,6 +68,14 @@ MorrisGameForm::MorrisGameForm(QTcpSocket *socket, QColor p1Color, QColor p2Colo
 
     startTurnTimer();
     updateTimerDisplay();
+}
+
+void MorrisGameForm::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    if (chatWidget) {
+        chatWidget->move(this->width() - chatWidget->width() - 10, this->height() - chatWidget->height() - 10);
+    }
 }
 
 MorrisGameForm::~MorrisGameForm() {
@@ -371,6 +392,15 @@ void MorrisGameForm::processNetworkMessage(const QString &msg) {
         if (turnTimer) turnTimer->stop();
         QMessageBox::information(this, "Game Over", "Opponent disconnected. You win!");
         this->close();
+        return;
+    }
+
+    if (trimmed.startsWith("CHAT_TEXT:")) {
+        chatWidget->addIncomingText(trimmed.mid(QString("CHAT_TEXT:").length()));
+        return;
+    }
+    if (trimmed.startsWith("CHAT_STICKER:")) {
+        chatWidget->addIncomingSticker(trimmed.mid(QString("CHAT_STICKER:").length()).toInt());
         return;
     }
 
